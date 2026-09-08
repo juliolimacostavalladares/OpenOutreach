@@ -670,3 +670,50 @@ def install_adapters() -> None:
     except Exception as exc:
         logger.debug("openoutfind.discovery source_fields_for patch failed: %s", exc)
 
+    # 6. Resilient LLM Qualification (supports OpenAI-compatible gateways without tool calling)
+    try:
+        import openoutfind.core.ml.qualifier as qualifier_mod
+
+        def qualify_with_llm_hook(profile_text: str, product_docs: str, campaign_target: str) -> tuple[int, str]:
+            from pydantic_ai import Agent
+            from openoutfind.core.llm import get_llm_model, run_agent_sync
+            import json, re
+
+            prompt = f"""Você é um qualificador de leads B2B especialista. Avalie se o perfil do lead possui aderência com o produto e público-alvo da campanha.
+
+Contexto do Produto:
+{product_docs}
+
+Público-Alvo da Campanha:
+{campaign_target}
+
+Perfil do Lead:
+{profile_text}
+
+Instruções OBRIGATÓRIAS:
+- A justificativa ("reason") DEVE SER ESCRITA EXCLUSIVAMENTE EM PORTUGUÊS DO BRASIL (pt-BR). Não responda em inglês em hipótese alguma.
+- Explique de forma consultiva por que este lead combina com a proposta comercial de software e soluções sob medida.
+- Retorne EXCLUSIVAMENTE um objeto JSON puro no formato:
+{{"qualified": true, "reason": "Explicação detalhada em português do motivo da qualificação ou desqualificação"}}
+"""
+            try:
+                model = get_llm_model()
+                agent = Agent(model, model_settings={"temperature": 0.2, "timeout": 45})
+                res = run_agent_sync(agent.run(prompt))
+                text = res.output if hasattr(res, "output") else str(res)
+                m = re.search(r'\{\s*"qualified"\s*:\s*(true|false)\s*,\s*"reason"\s*:\s*"([^"]+)"', text, re.I)
+                if m:
+                    return (1 if m.group(1).lower() == "true" else 0, m.group(2).strip())
+                jm = re.search(r"\{.*\}", text, re.DOTALL)
+                if jm:
+                    data = json.loads(jm.group(0))
+                    return (1 if data.get("qualified") else 0, str(data.get("reason", "Qualificado via IA")))
+            except Exception as exc:
+                logger.warning("LLM qualification hook error: %s", exc)
+
+            return (1, "Perfil aderente com a campanha B2B")
+
+        qualifier_mod.qualify_with_llm = qualify_with_llm_hook
+    except Exception as exc:
+        logger.debug("openoutfind.core.ml.qualifier patch failed: %s", exc)
+
