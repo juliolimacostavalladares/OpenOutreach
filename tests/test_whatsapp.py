@@ -76,41 +76,149 @@ def test_generate_deterministic_whatsapp(db):
     assert len(p1) == 19  # +55 (31) 9XXXX-XXXX
 
 
-def test_enrich_lead_whatsapp(db):
+def test_enrich_lead_whatsapp(db, monkeypatch):
+    # 1. Lead without existing phone and web search finds a real phone
     lead = Lead.objects.create(full_name="Ana Silva", source_fields={"contact_location_state": "RS"})
-    phone = enrich_lead_whatsapp(lead, use_llm=False)
+    monkeypatch.setattr(
+        "openoutreach.whatsapp.search_real_whatsapp_on_web",
+        lambda *args, **kwargs: {
+            "phone": "+55 (51) 99876-5432",
+            "raw": "5551998765432",
+            "valid": True,
+            "type": "mobile",
+            "source": "website_whatsapp",
+            "confidence": "high",
+            "reason": "Encontrado no site",
+            "url": "https://wa.me/5551998765432",
+        },
+    )
+    phone = enrich_lead_whatsapp(lead, use_web_search=True)
     lead.refresh_from_db()
-    assert lead.source_fields.get("whatsapp") == phone
-    assert phone.startswith("+55 (51) 9")
+    assert lead.source_fields.get("whatsapp") == "+55 (51) 99876-5432"
+    assert lead.source_fields.get("whatsapp_source") == "website_whatsapp"
+    assert phone == "+55 (51) 99876-5432"
 
-    # If lead already had a whatsapp, it preserves/formats it
+    # 2. Lead where web search finds nothing: DOES NOT INVENT A NUMBER
+    lead_empty = Lead.objects.create(full_name="Lead Fantasma", source_fields={"contact_location_state": "SP"})
+    monkeypatch.setattr(
+        "openoutreach.whatsapp.search_real_whatsapp_on_web",
+        lambda *args, **kwargs: {
+            "phone": "",
+            "raw": "",
+            "valid": False,
+            "type": "none",
+            "source": "not_found",
+            "confidence": "none",
+            "reason": "Nenhum número de contato público encontrado",
+            "url": "",
+        },
+    )
+    phone_empty = enrich_lead_whatsapp(lead_empty, use_web_search=True)
+    lead_empty.refresh_from_db()
+    assert phone_empty == ""
+    assert lead_empty.source_fields.get("whatsapp") == ""
+    assert lead_empty.source_fields.get("whatsapp_source") == "not_found"
+
+    # 3. If lead already had a whatsapp, it preserves/formats it
     lead2 = Lead.objects.create(full_name="Bruno Castro", source_fields={"whatsapp": "11988887777"})
-    phone2 = enrich_lead_whatsapp(lead2, use_llm=False)
+    phone2 = enrich_lead_whatsapp(lead2, use_web_search=False)
     assert phone2 == "+55 (11) 98888-7777"
 
 
-def test_enrich_all_leads(db):
-    Lead.objects.create(full_name="Lead 1", source_fields={"contact_location_state": "SP"})
+def test_search_real_whatsapp_on_web(monkeypatch):
+    from openoutreach.whatsapp import search_real_whatsapp_on_web
+
+    # Test 1: Found on company website
+    class DummyResp:
+        status_code = 200
+        text = '<html><body>Fale com nosso comercial: <a href="https://wa.me/5511987654321">WhatsApp</a></body></html>'
+
+    monkeypatch.setattr("requests.get", lambda *args, **kwargs: DummyResp())
+    res = search_real_whatsapp_on_web({
+        "contact_full_name": "Julio Lima",
+        "company_name": "Motion Studio",
+        "company_domain": "motionstudio.art",
+        "contact_location_state": "SP",
+    })
+    assert res["valid"] is True
+    assert res["phone"] == "+55 (11) 98765-4321"
+    assert res["source"] == "website_whatsapp"
+    assert res["url"] == "https://wa.me/5511987654321"
+
+    # Test 2: Nothing found online -> does NOT invent numbers
+    class DummyRespFail:
+        status_code = 404
+        text = "Not found"
+
+    monkeypatch.setattr("requests.get", lambda *args, **kwargs: DummyRespFail())
+    monkeypatch.setattr("ddgs.DDGS.text", lambda *args, **kwargs: [])
+    res_empty = search_real_whatsapp_on_web({
+        "contact_full_name": "Contato Desconhecido",
+        "company_name": "Empresa Sem Presenca",
+        "contact_location_state": "SP",
+    })
+    assert res_empty["valid"] is False
+    assert res_empty["phone"] == ""
+    assert res_empty["source"] == "not_found"
+
+
+def test_enrich_all_leads(db, monkeypatch):
+    Lead.objects.create(full_name="Lead 1", source_fields={"contact_location_state": "SP", "whatsapp": "11977778888"})
     Lead.objects.create(full_name="Lead 2", source_fields={"contact_location_state": "RJ"})
-    res = enrich_all_leads(use_llm=False)
+    monkeypatch.setattr(
+        "openoutreach.whatsapp.search_real_whatsapp_on_web",
+        lambda *args, **kwargs: {
+            "phone": "+55 (21) 98888-9999",
+            "raw": "5521988889999",
+            "valid": True,
+            "type": "mobile",
+            "source": "web_search_whatsapp_link",
+            "confidence": "high",
+            "reason": "Encontrado via web search",
+            "url": "https://wa.me/5521988889999",
+        },
+    )
+    res = enrich_all_leads(use_web_search=True)
     assert res["total"] >= 2
-    assert res["enriched"] >= 2
+    assert res["already_had"] >= 1
+    assert res["enriched"] >= 1
     for r in res["results"]:
         assert r["whatsapp"].startswith("+55 (")
         assert r["whatsapp_url"].startswith("https://wa.me/55")
 
 
-def test_whatsapp_views_and_api(client, db):
-    lead1 = Lead.objects.create(full_name="Carlos Viana", email="carlos@example.com", source_fields={"contact_location_state": "MG"})
-    lead2 = Lead.objects.create(full_name="Luciana Dias", email="", source_fields={"contact_location_state": "SP"})
+def test_whatsapp_views_and_api(client, db, monkeypatch):
+    lead1 = Lead.objects.create(
+        full_name="Carlos Viana",
+        email="carlos@example.com",
+        source_fields={"contact_location_state": "MG", "whatsapp": "31987654321"},
+    )
+    lead2 = Lead.objects.create(
+        full_name="Luciana Dias",
+        email="",
+        source_fields={"contact_location_state": "SP"},
+    )
     Deal.objects.create(lead=lead1, state=DealState.QUALIFIED, reason="Fit perfeito")
     Deal.objects.create(lead=lead2, state=DealState.QUALIFIED, reason="Fit perfeito")
 
-    # API enrich endpoint
+    # API enrich endpoint mock
+    monkeypatch.setattr(
+        "openoutreach.whatsapp.search_real_whatsapp_on_web",
+        lambda *args, **kwargs: {
+            "phone": "+55 (11) 99123-4567",
+            "raw": "5511991234567",
+            "valid": True,
+            "type": "mobile",
+            "source": "website_whatsapp",
+            "confidence": "high",
+            "reason": "Encontrado via website",
+            "url": "https://wa.me/5511991234567",
+        },
+    )
     enrich_res = client.post("/api/enrich/whatsapp")
     assert enrich_res.status_code == 200
     assert enrich_res.json()["status"] == "ok"
-    assert enrich_res.json()["enriched"] >= 2
+    assert enrich_res.json()["enriched"] >= 1
 
     # Leads API returns whatsapp
     leads_res = client.get("/api/leads?status=whatsapp")
