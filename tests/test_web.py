@@ -19,7 +19,7 @@ def web_settings(settings):
 
 
 def test_dashboard_is_read_only_and_uses_existing_qualification_contract(client, db):
-    good = Lead.objects.create(full_name="Maria Exemplo", email="maria@example.test")
+    good = Lead.objects.create(full_name="Maria Exemplo", source_fields={"whatsapp": "+55 (11) 98765-4321"})
     rejected = Lead.objects.create(full_name="Rejected")
     opted_out = Lead.objects.create(full_name="Opted out", disqualified=True)
     Lead.objects.create(synthetic=True)
@@ -28,22 +28,24 @@ def test_dashboard_is_read_only_and_uses_existing_qualification_contract(client,
     result = client.get("/api/dashboard").json()
     assert result["stats"]["discovered"] == 3
     assert result["stats"]["qualified"] == 1
+    assert result["stats"]["whatsapp"] == 1
+    assert result["stats"]["pending"] == 0
     assert result["recent"][0]["name"] == "Maria Exemplo"
     assert result["recent"][0]["reason"] == "Qualification evidence"
     assert not SiteConfig.objects.exists()
-    assert client.get("/api/leads", {"q":"MARIA", "status":"email"}).json()["total"] == 1
+    assert client.get("/api/leads", {"q":"MARIA", "status":"whatsapp"}).json()["total"] == 1
     assert client.get("/api/leads", {"status":"pending"}).json()["total"] == 0
 
 
 def test_secrets_never_leave_server_and_blank_preserves_existing_secret(client, db):
-    SiteConfig.objects.create(llm_api_key="test-secret-llm", mailbox_password="test-secret-mail")
+    SiteConfig.objects.create(llm_api_key="test-secret-llm", bettercontact_api_key="test-secret-bc")
     result = client.post("/api/config/integrations", {"ai_model":"provider:model", "llm_api_key":""})
     assert result.status_code == 200
     assert "test-secret" not in result.content.decode()
     assert "llm_api_key" not in result.json()  # only a configured boolean is exposed
     assert result.json()["configured"]["llm_api_key"] is True
     assert SiteConfig.load().llm_api_key == "test-secret-llm"
-    assert SiteConfig.load().mailbox_password == "test-secret-mail"
+    assert SiteConfig.load().bettercontact_api_key == "test-secret-bc"
 
 
 def test_campaign_validation_and_persistence(client, db):
@@ -57,7 +59,7 @@ def test_campaign_validation_and_persistence(client, db):
 
 
 def test_csv_filters_rejections_and_neutralizes_formulas(client, db):
-    good = Lead.objects.create(first_name="=1+1", full_name="Visible")
+    good = Lead.objects.create(first_name="=1+1", full_name="Visible", source_fields={"whatsapp": "+55 (11) 98765-4321"})
     bad = Lead.objects.create(full_name="Rejected")
     Deal.objects.create(lead=good, state=DealState.QUALIFIED, reason="Good fit")
     Deal.objects.create(lead=bad, state=DealState.FAILED, reason="Bad fit")
@@ -66,6 +68,8 @@ def test_csv_filters_rejections_and_neutralizes_formulas(client, db):
     assert len(rows) == 1
     assert rows[0]["first_name"] == "'=1+1"
     assert rows[0]["reason"] == "Good fit"
+    assert "whatsapp" in rows[0]
+    assert "email" not in rows[0]
     assert "attachment" in response["Content-Disposition"]
 
 

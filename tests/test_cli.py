@@ -31,13 +31,11 @@ def test_a_bare_invocation_is_run(db, monkeypatch):
     assert asked == [[]]
 
 
-def test_send_reaches_the_sender_with_its_own_arguments(monkeypatch):
-    """The sender has no management commands, so this is a call and not a call_command."""
-    passed = []
-    monkeypatch.setattr("cold_outreach.__main__.main", lambda argv: passed.append(argv) or 0)
-
+def test_send_is_deprecated_for_whatsapp(capsys):
+    """Email sending is deprecated in favor of WhatsApp."""
     assert cli._send(["5", "--prompt-line", "opener"]) == 0
-    assert passed == [["send", "5", "--prompt-line", "opener"]]
+    captured = capsys.readouterr()
+    assert "WhatsApp" in captured.err
 
 
 def test_runs_goal_defaults_to_something_small():

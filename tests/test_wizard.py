@@ -113,7 +113,7 @@ class TestWhatItAsksFor:
 
         message = str(raised.value)
         assert "OPENOUTFIND_PRODUCT_DOCS" in message
-        assert "OUTSEND_MAILBOX_ADDRESS" in message
+        assert "OUTSEND_OPERATOR_NAME" in message
         assert "OPENOUTFIND_ACCEPT_LEGAL_NOTICE" in message
 
     def test_a_variable_already_exported_is_not_asked_for_again(self, db, monkeypatch):

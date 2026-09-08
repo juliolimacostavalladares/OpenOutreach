@@ -36,15 +36,14 @@ LEGAL_NOTICE_URL = "https://github.com/eracle/OpenOutreach/blob/main/LEGAL_NOTIC
 BETTERCONTACT_SIGNUP_URL = "https://bettercontact.rocks?fpr=openoutreach"
 
 _INTRO = """
-  Welcome to OpenOutreach — it finds B2B leads that fit what you sell, writes down why
-  each one fits, and emails the ones you want it to.
+  Welcome to OpenOutreach — finds B2B leads that fit what you sell, writes down why
+  each one fits, and connects you via WhatsApp.
 
-  Setup takes a few minutes and is asked once. Have three things ready:
-    • an LLM provider key — the agent judges your leads and writes the mail
-    • a BetterContact key — powers lead discovery (free) and email finding (paid)
-    • a mailbox and its app password — the address the mail comes from
+  Setup takes a few minutes and is asked once. Have ready:
+    • an LLM provider key — judges your leads and evaluates fit
+    • a BetterContact key (optional) — or use free intelligent web discovery
 
-  You pay only those providers. Stop anytime; setup resumes where you left off.
+  Stop anytime; setup resumes where you left off.
 """
 
 
@@ -204,37 +203,10 @@ def _ask_bettercontact(config: SiteConfig) -> None:
 
 
 def _ask_operator(config: SiteConfig) -> None:
-    _say("\n  Who is running this, and who signs the mail.")
-    config.operator_name = _ask("Your name, as it should sign your mail")
-    config.operator_email = _ask("Your email address", validate=_looks_like_email)
+    _say("\n  Who is running this workspace.")
+    config.operator_name = _ask("Your name")
     config.operator_country_code = _ask(
-        "Your country (ISO 3166 alpha-2, e.g. US, GB, DE) — your own jurisdiction, "
-        "which decides your email rules", validate=_looks_like_country).lower()
-
-
-def _ask_mailbox(config: SiteConfig) -> None:
-    """Ask for the box the mail leaves from. The password is an app password.
-
-    Nothing is checked here: connecting a box is an SMTP login, the sender does it when it
-    first stores the box, and a second login from this side would be the same check in two
-    places disagreeing about which one is authoritative.
-    """
-    _say(
-        "\n  The mailbox your outreach is sent from. Use an **app password**, not your\n"
-        "  login password — Google and most providers reject the latter for SMTP.\n"
-        "  A non-Google provider also needs its four host/port values; leave them blank\n"
-        "  for Google Workspace."
-    )
-    config.mailbox_address = _ask("Mailbox address", validate=_looks_like_email)
-    config.mailbox_password = _ask_secret("App password for that mailbox")
-    config.smtp_host = _ask("SMTP host (blank for Google)", required=False)
-    config.smtp_port = _ask("SMTP port (blank for Google)", required=False)
-    config.imap_host = _ask("IMAP host (blank for Google)", required=False)
-    config.imap_port = _ask("IMAP port (blank for Google)", required=False)
-    config.signature = _ask_paragraph(
-        "The sign-off appended to every message (blank for none)", required=False)
-    config.booking_link = _ask(
-        "A link to book a call, if you have one (blank to skip)", required=False)
+        "Your country (ISO 3166 alpha-2, e.g. BR, US, PT)", validate=_looks_like_country).lower()
 
 
 #: What an install cannot run without, in the order it is asked for. Each key names the
@@ -244,8 +216,7 @@ _ASK = {
     "product_docs": _ask_campaign,
     "ai_model": _ask_llm,
     "bettercontact_api_key": _ask_bettercontact,
-    "operator_email": _ask_operator,
-    "mailbox_address": _ask_mailbox,
+    "operator_name": _ask_operator,
 }
 _REQUIRED = tuple(_ASK)
 
@@ -298,18 +269,10 @@ def _accept_the_legal_notice() -> bool:
 # ── handing it over ──────────────────────────────────────────────
 
 def _check_children() -> None:
-    """Let each child say whether what it was handed is enough for it.
-
-    Each check is the child's own, unchanged and unwrapped: the finder pings the model and
-    writes the operator row, the sender connects the mailbox by an SMTP login and records
-    who signs. Neither is re-implemented here, so there is one place that knows what a
-    find needs and one that knows what a send needs.
-    """
-    from cold_outreach import first_run as sender_first_run
+    """Let the finder verify the model and qualification requirements."""
     from openoutfind.core import readiness as finder_readiness
 
     finder_readiness.check_ready()
-    sender_first_run.check_ready()
 
 
 # ── prompt primitives ────────────────────────────────────────────
