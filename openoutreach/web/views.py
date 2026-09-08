@@ -16,8 +16,8 @@ from openoutreach.config.models import SiteConfig
 from openoutreach.web.forms import CampaignForm, IntegrationForm
 
 PUBLIC_FIELDS = (
-    "product_docs", "campaign_target", "booking_link", "ai_model",
-    "llm_api_base", "operator_name", "operator_country_code",
+    "product_docs", "campaign_target", "whatsapp_template", "booking_link",
+    "ai_model", "llm_api_base", "operator_name", "operator_country_code",
     "accepted_legal_notice",
 )
 
@@ -58,14 +58,25 @@ def configuration(request, section):
 def records():
     rows = list(lead_records())
     leads_map = {lead.pk: lead for lead in Lead.objects.filter(pk__in=[r["lead_id"] for r in rows])}
+    config = SiteConfig.objects.filter(pk=1).first() or SiteConfig()
+    from openoutreach.whatsapp import format_campaign_whatsapp_message, get_whatsapp_url
+
     for row in rows:
         lead = leads_map.get(row["lead_id"])
         row["name"] = (lead.full_name if lead else "") or " ".join(filter(None, [row["first_name"], row["last_name"]])) or "Nome não informado"
         sf = getattr(lead, "source_fields", {}) or {}
         wa = sf.get("whatsapp") or sf.get("phone") or ""
         row["whatsapp"] = wa
-        from openoutreach.whatsapp import get_whatsapp_url
-        row["whatsapp_url"] = get_whatsapp_url(wa) if wa else ""
+        msg = format_campaign_whatsapp_message(
+            template=getattr(config, "whatsapp_template", "") or "",
+            name=row.get("name", ""),
+            first_name=row.get("first_name", ""),
+            company=row.get("company", ""),
+            title=row.get("title", ""),
+            booking_link=getattr(config, "booking_link", "") or "",
+        )
+        row["whatsapp_message"] = msg
+        row["whatsapp_url"] = get_whatsapp_url(wa, text=msg) if wa else ""
         row["whatsapp_confidence"] = sf.get("whatsapp_confidence", "none" if not wa else "medium")
         row["whatsapp_type"] = sf.get("whatsapp_type", "none" if not wa else "mobile")
     return sorted(rows, key=lambda row: row["qualified_at"], reverse=True)

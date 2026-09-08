@@ -263,3 +263,29 @@ def test_check_whatsapp_presence():
     assert inv["valid"] is False
     assert inv["confidence"] == "none"
 
+
+def test_format_campaign_whatsapp_message():
+    from openoutreach.whatsapp import format_campaign_whatsapp_message
+
+    template = "Olá {primeiro_nome}, vi seu cargo de {cargo} na {empresa}. Agende: {link}"
+    rendered = format_campaign_whatsapp_message(
+        template=template,
+        name="Lucas Silva",
+        company="Clínica Odonto",
+        title="Cirurgião Dentista",
+        booking_link="https://cal.com/lucas",
+    )
+    assert rendered == "Olá Lucas, vi seu cargo de Cirurgião Dentista na Clínica Odonto. Agende: https://cal.com/lucas"
+
+    # Default template fallback when template is blank
+    rendered_default = format_campaign_whatsapp_message(
+        template="",
+        name="Paula Souza",
+        company="Consultório Viva",
+        title="Sócia",
+    )
+    assert "Paula" in rendered_default
+    assert "Consultório Viva" in rendered_default
+    assert "Sócia" in rendered_default
+
+

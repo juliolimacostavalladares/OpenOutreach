@@ -680,3 +680,64 @@ def enrich_all_leads(use_web_search: bool = True, allow_synthetic_fallback: bool
         "leads": results,
         "results": results,
     }
+
+
+DEFAULT_WHATSAPP_TEMPLATE = (
+    "Olá {primeiro_nome}, tudo bem? Vi seu perfil como {cargo} na {empresa}.\n"
+    "Nós ajudamos pequenas empresas e consultórios a atraírem mais clientes com páginas modernas e sistemas sob medida.\n"
+    "Podemos bater um papo rápido de 5 minutos sobre como melhorar seus resultados?"
+)
+
+
+def format_campaign_whatsapp_message(
+    template: str = "",
+    name: str = "",
+    first_name: str = "",
+    company: str = "",
+    title: str = "",
+    booking_link: str = "",
+) -> str:
+    """Format a customized WhatsApp initial message based on campaign template and lead data.
+
+    Supported variables:
+      {primeiro_nome}, {nome}, {empresa}, {cargo}, {link}
+    """
+    tpl = (template or "").strip() or DEFAULT_WHATSAPP_TEMPLATE
+
+    # Resolve first name cleanly
+    first = (first_name or "").strip()
+    if not first and name:
+        parts = name.strip().split()
+        first = parts[0] if parts else ""
+    first = first or "você"
+
+    full_name = (name or "").strip() or first
+    comp = (company or "").strip() or "sua empresa"
+    role = (title or "").strip() or "responsável"
+    link = (booking_link or "").strip()
+
+    replacements = {
+        "{primeiro_nome}": first,
+        "{primeiro-nome}": first,
+        "{first_name}": first,
+        "{nome}": full_name,
+        "{name}": full_name,
+        "{empresa}": comp,
+        "{company}": comp,
+        "{cargo}": role,
+        "{title}": role,
+        "{link}": link,
+        "{booking_link}": link,
+    }
+
+    result = tpl
+    for var, val in replacements.items():
+        result = result.replace(var, val)
+
+    # Clean up empty link if not configured
+    if not link:
+        result = result.replace("{link}", "").replace("{booking_link}", "")
+
+    # Normalize double spaces or empty lines caused by missing optional variables
+    return result.strip()
+

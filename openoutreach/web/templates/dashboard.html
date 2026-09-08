@@ -282,56 +282,79 @@
         <section id="page-campaign" class="page" hidden>
           <div class="page-heading">
             <div>
-              <div class="eyebrow">O PONTO DE PARTIDA</div>
+              <div class="eyebrow">CAMPANHA WHATSAPP</div>
               <h1>Minha campanha<span class="heading-dot">.</span></h1>
               <p>
-                Quanto melhor o contexto, melhores as pessoas que você encontra.
+                Defina o que você oferece, quem é seu cliente ideal e o roteiro para contato direto no WhatsApp.
               </p>
             </div>
-            <span class="pill neutral">Uma campanha por workspace</span>
+            <span class="pill neutral">100% WhatsApp</span>
           </div>
           <div class="form-layout">
             <form id="campaign-form" class="panel form-panel">
               <div class="panel-heading">
                 <div>
-                  <h2>O que você vende e para quem</h2>
+                  <h2>Contexto e Roteiro de Prospecção</h2>
                   <p>
-                    Este contexto orienta a busca, a qualificação e os e-mails.
+                    Este contexto orienta a busca inteligente de leads, a qualificação por IA e a geração da abordagem via WhatsApp.
                   </p>
                 </div>
-                <i data-icon="target"></i>
+                <i data-icon="whatsapp"></i>
               </div>
               <div class="form-fields">
                 <label
                   >Seu produto ou serviço<span
-                    >O que ele faz, qual problema resolve e por que alguém o
-                    escolheria.</span
+                    >O que ele faz, qual problema resolve e por que uma pequena empresa ou profissional o contrataria.</span
                   ><textarea
                     name="product_docs"
-                    rows="5"
+                    rows="4"
                     maxlength="20000"
                     required
-                    placeholder="Ex.: Uma plataforma que ajuda equipes comerciais a organizar seus contatos e acompanhar oportunidades…"
+                    placeholder="Ex.: Criação de páginas modernas de alta conversão, landing pages e sistemas sob medida para pequenas empresas, consultórios odontológicos e escritórios de advocacia…"
                   ></textarea></label
                 ><label
-                  >Seu público ideal<span
-                    >Descreva tipos de empresa, cargos, mercados e o resultado
-                    esperado.</span
+                  >Seu público ideal no WhatsApp<span
+                    >Descreva os nichos, tipos de empresa (pequenas empresas locais), consultórios, ramos e cargos desejados.</span
                   ><textarea
                     name="campaign_target"
-                    rows="5"
+                    rows="4"
                     maxlength="20000"
                     required
-                    placeholder="Ex.: Diretores comerciais de empresas de tecnologia no Brasil, com equipes de 10 a 50 vendedores…"
+                    placeholder="Ex.: Donos de pequenas empresas, sócios de clínicas odontológicas, consultórios médicos e escritórios de advocacia no Brasil que precisam de presença digital profissional e captação de clientes…"
                   ></textarea>
                 </label>
                 <div class="form-divider"></div>
                 <label
-                  >Link para agendamento <small>Opcional</small
+                  >Roteiro da Mensagem no WhatsApp<span
+                    >Mensagem de abordagem inicial. Clique para inserir: <code class="tag-insert" data-tag="{primeiro_nome}">{primeiro_nome}</code> <code class="tag-insert" data-tag="{empresa}">{empresa}</code> <code class="tag-insert" data-tag="{cargo}">{cargo}</code> <code class="tag-insert" data-tag="{link}">{link}</code></span
+                  ><textarea
+                    id="campaign-whatsapp-template"
+                    name="whatsapp_template"
+                    rows="4"
+                    maxlength="20000"
+                    placeholder="Ex.: Olá {primeiro_nome}, tudo bem? Vi que você atua como {cargo} na {empresa}. Nós ajudamos pequenas empresas e consultórios a atraírem mais clientes com páginas modernas e sistemas sob medida. Posso te enviar um exemplo prático?"
+                  ></textarea>
+                </label>
+                <div class="wa-preview-box" id="wa-campaign-preview">
+                  <div class="wa-preview-header">
+                    <span class="wa-preview-title">Prévia da mensagem no WhatsApp</span>
+                  </div>
+                  <div class="wa-bubble-container">
+                    <div class="wa-bubble">
+                      <p id="wa-bubble-text">Olá Lucas, tudo bem? Vi seu perfil como Sócio na Clínica Sorriso...</p>
+                      <span class="wa-bubble-time">10:45 <span class="wa-checks">✓✓</span></span>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-divider"></div>
+                <label
+                  >Link para agendamento ou portfólio <small>Opcional</small
+                  ><span
+                    >Link que será inserido onde você colocar a tag {link} (ex.: Cal.com, Calendly ou seu site).</span
                   ><input
                     type="url"
                     name="booking_link"
-                    placeholder="https://cal.com/seu-nome" /></label
+                    placeholder="https://cal.com/seu-nome ou https://seuportfolio.com.br" /></label
                 >
                 <div class="form-feedback" role="status"></div>
                 <div class="form-footer">
@@ -344,16 +367,17 @@
             </form>
             <aside class="context-card">
               <div class="context-icon"><i data-icon="sparkles"></i></div>
-              <h2>Um bom briefing<br />faz toda a diferença.</h2>
-              <p>Pense em quem mais se beneficia do que você oferece.</p>
+              <h2>Estratégia de Conversão<br />no WhatsApp.</h2>
+              <p>Dicas essenciais para alta taxa de resposta no WhatsApp:</p>
               <ul>
-                <li>Explique o problema que resolve.</li>
-                <li>Descreva o perfil de empresa.</li>
-                <li>Inclua os cargos que decidem.</li>
-                <li>Defina o objetivo da conversa.</li>
+                <li>Vá direto ao ponto em 2 a 4 linhas.</li>
+                <li>Cite o primeiro nome e a empresa do contato.</li>
+                <li>Foque na dor do nicho (odontologia, advocacia, etc).</li>
+                <li>Termine com uma pergunta simples de baixo atrito.</li>
+                <li>Evite links longos na primeira mensagem.</li>
               </ul>
               <div class="context-bottom">
-                Cada lead vem com um motivo.<br />Seu briefing é o começo dele.
+                Cada lead qualificado recebe essa mensagem personalizada pronta para envio em 1 clique.
               </div>
             </aside>
           </div>
@@ -364,8 +388,7 @@
               <div class="eyebrow">TUDO CONECTADO</div>
               <h1>Integrações<span class="heading-dot">.</span></h1>
               <p>
-                Conecte a inteligência, os dados e a caixa de e-mail que você já
-                usa.
+                Conecte a inteligência artificial e os provedores de dados que você usa.
               </p>
             </div>
             <span class="pill neutral"
