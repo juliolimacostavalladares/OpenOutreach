@@ -56,6 +56,7 @@ dependencies = [
     # than inherited from the finder: the rule above is that this file names what *this*
     # package imports directly.
     "pytz>=2024.1",
+    "ddgs>=9.0",
 ]
 
 [project.optional-dependencies]
