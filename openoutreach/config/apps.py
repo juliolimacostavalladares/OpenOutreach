@@ -8,3 +8,8 @@ class ConfigAppConfig(AppConfig):
     # registry and a bare `config` is exactly the label somebody else will want.
     label = "openoutreach_config"
     default_auto_field = "django.db.models.BigAutoField"
+
+    def ready(self):
+        from openoutreach.adapters import install_post_ready_adapters
+        install_post_ready_adapters()
+

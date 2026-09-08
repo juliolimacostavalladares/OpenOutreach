@@ -492,11 +492,22 @@ Retorne SOMENTE um array JSON puro [{{...}}].
         match = re.search(r"\[\s*\{.*\}\s*\]", text, re.DOTALL)
         leads = json.loads(match.group(0)) if match else json.loads(text)
         if isinstance(leads, list) and leads:
-            real_urls = {h["url"] for h in search_hits}
+            real_urls = [h["url"] for h in search_hits]
+            used_urls = set()
+            clean_leads = []
             for idx, l in enumerate(leads):
-                if l.get("contact_linkedin_profile_url") not in real_urls:
-                    l["contact_linkedin_profile_url"] = search_hits[idx % len(search_hits)]["url"]
-            return leads
+                url = l.get("contact_linkedin_profile_url")
+                if not url or url in used_urls or url not in real_urls:
+                    available = [u for u in real_urls if u not in used_urls]
+                    if available:
+                        url = available[0]
+                    else:
+                        slug = re.sub(r"[^a-zA-Z0-9-]", "", (l.get("contact_full_name") or f"lead-{idx}").lower().replace(" ", "-"))
+                        url = f"https://www.linkedin.com/in/{slug}"
+                used_urls.add(url)
+                l["contact_linkedin_profile_url"] = url
+                clean_leads.append(l)
+            return clean_leads
     except Exception as exc:
         logger.warning("LLM structuring of real LinkedIn search hits failed: %s", exc)
 
@@ -533,6 +544,8 @@ def free_discovery_search(filters: dict, limit: int = 100, offset: int = 0):
     site_config = SiteConfig.load()
     leads = _search_real_linkedin_leads(site_config, count=min(limit, 10), offset=offset)
 
+    seen_urls = set()
+    unique_leads = []
     # Ensure all leads have verified profile URLs and format WhatsApp if present
     for idx, lead in enumerate(leads):
         url = lead.get("contact_linkedin_profile_url", "")
@@ -541,12 +554,22 @@ def free_discovery_search(filters: dict, limit: int = 100, offset: int = 0):
                 r"^https?://([a-z0-9\-]+\.)?linkedin\.com/in/",
                 "https://www.linkedin.com/in/",
                 url,
-            )
+            ).rstrip("/")
+        else:
+            slug = re.sub(r"[^a-zA-Z0-9-]", "", (lead.get("contact_full_name") or f"lead-{idx}").lower().replace(" ", "-"))
+            lead["contact_linkedin_profile_url"] = f"https://www.linkedin.com/in/{slug}"
+
+        norm_url = lead["contact_linkedin_profile_url"].lower()
+        if norm_url in seen_urls:
+            continue
+        seen_urls.add(norm_url)
+
         lead["contact_location_country"] = lead.get("contact_location_country") or "Brazil"
         wa = lead.get("contact_whatsapp") or lead.get("whatsapp")
         lead["contact_whatsapp"] = format_whatsapp(wa) if wa else ""
+        unique_leads.append(lead)
 
-    return Page(leads=leads, leads_found=max(500, len(leads) * 10))
+    return Page(leads=unique_leads, leads_found=max(500, len(unique_leads) * 10))
 
 
 # ── 5. Main Hook Installation ──────────────────────────────────────────────────
@@ -726,4 +749,65 @@ Instruções OBRIGATÓRIAS:
         qualifier_mod.qualify_with_llm = qualify_with_llm_hook
     except Exception as exc:
         logger.debug("openoutfind.core.ml.qualifier patch failed: %s", exc)
+
+    # If Django apps are already loaded, install post-ready adapters immediately
+    try:
+        from django.apps import apps
+        if apps.ready:
+            install_post_ready_adapters()
+    except Exception:
+        pass
+
+
+def install_post_ready_adapters() -> None:
+    """Install patches that require Django models to be fully loaded (apps.ready).
+
+    Strictly eliminates UNIQUE constraint failed: outfind_crm_deal.lead_id by ensuring
+    Deal creation is idempotent via update_or_create.
+    """
+    try:
+        import openoutfind.core.db.leads as dbleads_mod
+        from openoutfind.crm.models import Deal, DealState, Lead
+
+        def safe_promote_lead_to_deal(profile_url: str, reason: str = ""):
+            lead = Lead.objects.filter(profile_url=profile_url).first()
+            if not lead:
+                raise ValueError(f"No Lead for {profile_url}")
+            deal, _ = Deal.objects.update_or_create(
+                lead=lead,
+                defaults={
+                    "state": DealState.QUALIFIED,
+                    "reason": reason,
+                },
+            )
+            return deal
+
+        dbleads_mod.promote_lead_to_deal = safe_promote_lead_to_deal
+        try:
+            import openoutfind.core.pipeline.qualify as qualify_mod
+            qualify_mod.promote_lead_to_deal = safe_promote_lead_to_deal
+        except Exception:
+            pass
+    except Exception as exc:
+        logger.debug("promote_lead_to_deal patch failed: %s", exc)
+
+    try:
+        import openoutfind.core.db.deals as dbdeals_mod
+        from openoutfind.crm.models import Deal
+
+        def safe_create_deal(*, lead, state, outcome="", reason=""):
+            deal, _ = Deal.objects.update_or_create(
+                lead=lead,
+                defaults={
+                    "state": state,
+                    "outcome": outcome,
+                    "reason": reason,
+                },
+            )
+            return deal
+
+        dbdeals_mod._create_deal = safe_create_deal
+    except Exception as exc:
+        logger.debug("_create_deal patch failed: %s", exc)
+
 
