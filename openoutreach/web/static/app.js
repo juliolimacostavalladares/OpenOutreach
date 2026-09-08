@@ -313,7 +313,7 @@ function table(rows) {
   return `<table><thead><tr><th>CONTATO</th><th>EMPRESA</th><th>E-MAIL</th><th>WHATSAPP</th><th>QUALIFICADO EM</th><th><span class="sr-only">Detalhes</span></th></tr></thead><tbody>${rows
     .map(
       (row, i) =>
-        `<tr><td><div class="person"><span class="person-avatar tone-${i % 4}">${esc(initials(row.name))}</span><span><strong>${esc(row.name)}</strong><small>${esc(row.title || "Cargo não informado")}</small></span></div></td><td>${esc(row.company || "Não informada")}</td><td><span class="status-badge ${row.email ? "" : "pending"}">${row.email ? "Disponível" : "Não encontrado"}</span></td><td>${row.whatsapp ? `<a href="${esc(row.whatsapp_url || `https://wa.me/${row.whatsapp.replace(/\D/g, "")}`)}" target="_blank" rel="noopener noreferrer" class="wa-badge" title="Abrir conversa no WhatsApp">${icon("whatsapp")} ${esc(row.whatsapp)}</a>` : '<span class="status-badge pending">Não cadastrado</span>'}</td><td>${formatDate(row.qualified_at)}</td><td><button class="detail-button" data-lead="${esc(row.lead_id)}" aria-label="Ver detalhes de ${esc(row.name)}">Ver contexto ${icon("arrow")}</button></td></tr>`,
+        `<tr><td><div class="person"><span class="person-avatar tone-${i % 4}">${esc(initials(row.name))}</span><span><strong>${esc(row.name)}</strong><small>${esc(row.title || "Cargo não informado")}</small></span></div></td><td>${esc(row.company || "Não informada")}</td><td><span class="status-badge ${row.email ? "" : "pending"}">${row.email ? "Disponível" : "Não encontrado"}</span></td><td>${row.whatsapp ? `<a href="${esc(row.whatsapp_url || `https://wa.me/${row.whatsapp.replace(/\D/g, "")}`)}" target="_blank" rel="noopener noreferrer" class="wa-badge" title="Abrir conversa no WhatsApp">${icon("whatsapp")} ${esc(row.whatsapp)}</a>` : '<span class="status-badge pending" title="Nenhum número público encontrado na internet">Não encontrado</span>'}</td><td>${formatDate(row.qualified_at)}</td><td><button class="detail-button" data-lead="${esc(row.lead_id)}" aria-label="Ver detalhes de ${esc(row.name)}">Ver contexto ${icon("arrow")}</button></td></tr>`,
     )
     .join("")}</tbody></table>`;
 }
@@ -552,7 +552,7 @@ function showLead(id) {
       : '<span class="pill" style="margin-left:8px;font-size:11px;background:rgba(255,255,255,0.08);">Padrão móvel válido</span>'
     : "";
   $("#lead-detail").innerHTML =
-    `<span class="person-avatar detail-avatar">${esc(initials(row.name))}</span><h2 id="lead-detail-title">${esc(row.name)}</h2><p class="detail-subtitle">${esc(row.title || "Cargo não informado")}<br>${esc(row.company || "Empresa não informada")}</p><div class="detail-reason"><h3>${icon("sparkles")}Por que este lead combina com você</h3><p>${esc(row.reason || "Nenhum motivo registrado.")}</p></div><div class="detail-field"><span>E-mail profissional</span><strong>${esc(row.email || "Não encontrado")}</strong></div><div class="detail-field"><span>WhatsApp / Celular</span><strong>${row.whatsapp ? `<a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="wa-badge" style="display:inline-flex;padding:4px 10px;font-size:14px;">${icon("whatsapp")} ${esc(row.whatsapp)}</a>${confBadge}` : "Não cadastrado"}</strong></div><div class="detail-field"><span>Qualificado em</span><strong>${formatDate(row.qualified_at)}</strong></div><div class="dialog-footer" style="display:flex;gap:8px;flex-wrap:wrap;">${row.email ? '<button class="button" id="copy-email">' + icon("at") + "Copiar e-mail</button>" : ""}${row.whatsapp ? '<a class="button button-primary" id="open-whatsapp" href="' + esc(waUrl) + '" target="_blank" rel="noopener noreferrer" style="background:#25D366;border-color:#25D366;color:#fff;">' + icon("whatsapp") + "Conversar no WhatsApp ↗</a>" : ""}</div>`;
+    `<span class="person-avatar detail-avatar">${esc(initials(row.name))}</span><h2 id="lead-detail-title">${esc(row.name)}</h2><p class="detail-subtitle">${esc(row.title || "Cargo não informado")}<br>${esc(row.company || "Empresa não informada")}</p><div class="detail-reason"><h3>${icon("sparkles")}Por que este lead combina com você</h3><p>${esc(row.reason || "Nenhum motivo registrado.")}</p></div><div class="detail-field"><span>E-mail profissional</span><strong>${esc(row.email || "Não encontrado")}</strong></div><div class="detail-field"><span>WhatsApp / Celular</span><strong>${row.whatsapp ? `<a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="wa-badge" style="display:inline-flex;padding:4px 10px;font-size:14px;">${icon("whatsapp")} ${esc(row.whatsapp)}</a>${confBadge}` : '<span class="status-badge pending">Não encontrado na internet</span>'}</strong></div><div class="detail-field"><span>Qualificado em</span><strong>${formatDate(row.qualified_at)}</strong></div><div class="dialog-footer" style="display:flex;gap:8px;flex-wrap:wrap;">${row.email ? '<button class="button" id="copy-email">' + icon("at") + "Copiar e-mail</button>" : ""}${row.whatsapp ? '<a class="button button-primary" id="open-whatsapp" href="' + esc(waUrl) + '" target="_blank" rel="noopener noreferrer" style="background:#25D366;border-color:#25D366;color:#fff;">' + icon("whatsapp") + "Conversar no WhatsApp ↗</a>" : ""}</div>`;
   $("#lead-dialog").setAttribute("aria-labelledby", "lead-detail-title");
   $("#lead-dialog").showModal();
   $("#copy-email")?.addEventListener("click", async () => {
@@ -742,7 +742,13 @@ $("#enrich-whatsapp-btn")?.addEventListener("click", async () => {
   btn.innerHTML = `${icon("refresh")} Enriquecendo…`;
   try {
     const res = await api("/api/enrich/whatsapp", { method: "POST" });
-    toast(`Enriquecimento concluído: ${res.enriched} leads atualizados.`);
+    if (res.enriched > 0) {
+      toast(`Busca na internet concluída: ${res.enriched} WhatsApp encontrados.`);
+    } else if (res.total > 0) {
+      toast(`Busca na internet concluída: nenhum número público localizado para os leads.`);
+    } else {
+      toast(`Nenhum lead na base para enriquecer.`);
+    }
     await load();
   } catch (err) {
     toast(`Erro no enriquecimento: ${err.message}`);

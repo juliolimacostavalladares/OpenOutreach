@@ -69,17 +69,11 @@ def records():
         row["name"] = (lead.full_name if lead else "") or " ".join(filter(None, [row["first_name"], row["last_name"]])) or "Nome não informado"
         sf = getattr(lead, "source_fields", {}) or {}
         wa = sf.get("whatsapp") or sf.get("phone") or ""
-        if not wa and lead:
-            from openoutreach.whatsapp import generate_deterministic_whatsapp
-            wa = generate_deterministic_whatsapp(lead)
-            sf["whatsapp"] = wa
-            lead.source_fields = sf
-            lead.save(update_fields=["source_fields"])
         row["whatsapp"] = wa
         from openoutreach.whatsapp import get_whatsapp_url
-        row["whatsapp_url"] = get_whatsapp_url(wa)
-        row["whatsapp_confidence"] = sf.get("whatsapp_confidence", "medium")
-        row["whatsapp_type"] = sf.get("whatsapp_type", "mobile")
+        row["whatsapp_url"] = get_whatsapp_url(wa) if wa else ""
+        row["whatsapp_confidence"] = sf.get("whatsapp_confidence", "none" if not wa else "medium")
+        row["whatsapp_type"] = sf.get("whatsapp_type", "none" if not wa else "mobile")
     return sorted(rows, key=lambda row: row["qualified_at"], reverse=True)
 
 
@@ -141,7 +135,7 @@ def leads(request):
 @require_http_methods(["POST"])
 def enrich_whatsapp(request):
     from openoutreach.whatsapp import enrich_all_leads
-    result = enrich_all_leads(use_llm=False)
+    result = enrich_all_leads(use_web_search=True)
     return JsonResponse(result)
 
 

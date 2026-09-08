@@ -328,7 +328,7 @@ def _fallback_real_leads(offset: int = 0) -> list[dict[str, Any]]:
             "contact_location_state": "SP",
             "contact_location_country": "Brazil",
             "contact_linkedin_profile_url": "https://br.linkedin.com/in/glaucogabriel/en",
-            "contact_whatsapp": "+55 (11) 98765-4321",
+            "contact_whatsapp": "",
         },
         {
             "contact_full_name": "Vicente Sanches",
@@ -342,7 +342,7 @@ def _fallback_real_leads(offset: int = 0) -> list[dict[str, Any]]:
             "contact_location_state": "MG",
             "contact_location_country": "Brazil",
             "contact_linkedin_profile_url": "https://br.linkedin.com/in/vicentesanches",
-            "contact_whatsapp": "+55 (31) 98877-6655",
+            "contact_whatsapp": "",
         },
         {
             "contact_full_name": "Giovanne Saraiva",
@@ -356,7 +356,7 @@ def _fallback_real_leads(offset: int = 0) -> list[dict[str, Any]]:
             "contact_location_state": "PR",
             "contact_location_country": "Brazil",
             "contact_linkedin_profile_url": "https://www.linkedin.com/in/giovannesaraiva/",
-            "contact_whatsapp": "+55 (41) 99123-4567",
+            "contact_whatsapp": "",
         },
         {
             "contact_full_name": "Adriano Zanella",
@@ -370,7 +370,7 @@ def _fallback_real_leads(offset: int = 0) -> list[dict[str, Any]]:
             "contact_location_state": "RS",
             "contact_location_country": "Brazil",
             "contact_linkedin_profile_url": "https://www.linkedin.com/in/adrianozanella/",
-            "contact_whatsapp": "+55 (51) 99654-3210",
+            "contact_whatsapp": "",
         },
         {
             "contact_full_name": "Marcelo M. Salomão",
@@ -384,7 +384,7 @@ def _fallback_real_leads(offset: int = 0) -> list[dict[str, Any]]:
             "contact_location_state": "RJ",
             "contact_location_country": "Brazil",
             "contact_linkedin_profile_url": "https://br.linkedin.com/in/marcelo-m-salomao",
-            "contact_whatsapp": "+55 (21) 99765-4321",
+            "contact_whatsapp": "",
         },
     ]
     return real_profiles
@@ -523,7 +523,7 @@ def free_discovery_search(filters: dict, limit: int = 100, offset: int = 0):
     site_config = SiteConfig.load()
     leads = _search_real_linkedin_leads(site_config, count=min(limit, 10), offset=offset)
 
-    # Ensure all leads have verified profile URLs and WhatsApp
+    # Ensure all leads have verified profile URLs and format WhatsApp if present
     for idx, lead in enumerate(leads):
         url = lead.get("contact_linkedin_profile_url", "")
         if "linkedin.com/in/" in url:
@@ -533,12 +533,8 @@ def free_discovery_search(filters: dict, limit: int = 100, offset: int = 0):
                 url,
             )
         lead["contact_location_country"] = lead.get("contact_location_country") or "Brazil"
-        wa = lead.get("contact_whatsapp")
-        if not wa:
-            state = lead.get("contact_location_state") or "SP"
-            ddd = STATE_TO_DDD.get(str(state).upper(), "11")
-            wa = format_whatsapp(f"{ddd}98{idx:02d}1234", default_ddd=ddd)
-        lead["contact_whatsapp"] = format_whatsapp(wa)
+        wa = lead.get("contact_whatsapp") or lead.get("whatsapp")
+        lead["contact_whatsapp"] = format_whatsapp(wa) if wa else ""
 
     return Page(leads=leads, leads_found=max(500, len(leads) * 10))
 
@@ -662,18 +658,7 @@ def install_adapters() -> None:
         def source_fields_for_hook(row: dict) -> dict:
             sf = orig_source_fields_for(row)
             wa = row.get("contact_whatsapp") or row.get("whatsapp") or row.get("phone")
-            if not wa:
-                state = row.get("contact_location_state") or "SP"
-                ddd = STATE_TO_DDD.get(str(state).upper(), "11")
-                import hashlib
-                seed = f"{row.get('contact_full_name')}:{row.get('company_name')}:{ddd}"
-                h = hashlib.sha256(seed.encode('utf-8')).hexdigest()
-                first_digit = str(6 + (int(h[0], 16) % 4))
-                rem = ''.join(str(int(c, 16) % 10) for c in h[1:8])
-                wa = f"+55 ({ddd}) 9{first_digit}{rem[:3]}-{rem[3:]}"
-            else:
-                wa = format_whatsapp(wa)
-            sf["whatsapp"] = wa
+            sf["whatsapp"] = format_whatsapp(wa) if wa else ""
             return sf
 
         discovery_mod.source_fields_for = source_fields_for_hook
