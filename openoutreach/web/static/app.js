@@ -168,8 +168,9 @@ function makeDemo() {
     title,
     company,
     whatsapp: demoPhones[i] || "",
+    whatsapp_message: `Olá ${name.split(" ")[0]}, tudo bem? Vi seu perfil como ${title} na ${company}. Nós ajudamos pequenas empresas e consultórios a atraírem mais clientes com páginas modernas e sistemas sob medida. Posso te enviar um exemplo prático?`,
     whatsapp_url: demoPhones[i]
-      ? `https://wa.me/${demoPhones[i].replace(/\D/g, "")}`
+      ? `https://wa.me/${demoPhones[i].replace(/\D/g, "")}?text=${encodeURIComponent(`Olá ${name.split(" ")[0]}, tudo bem? Vi seu perfil como ${title} na ${company}. Nós ajudamos pequenas empresas e consultórios a atraírem mais clientes com páginas modernas e sistemas sob medida. Posso te enviar um exemplo prático?`)}`
       : "",
     reason,
     lead_id: `demo-${i}`,
@@ -178,11 +179,12 @@ function makeDemo() {
     qualified_at: dateAt(i),
     website: "",
     linkedin_url: "",
+    whatsapp_confidence: "high",
   }));
-  const discovered = [2, 3, 1, 4, 3, 6, 4, 8, 5, 9, 6, 11, 10, 12];
+  const discovered = [4, 6, 8, 5, 9, 12, 10, 7, 11, 13, 8, 14, 15, 12];
   return {
     stats: {
-      discovered: 84,
+      discovered: 124,
       qualified: 8,
       whatsapp: 8,
       pending: 0,
@@ -197,9 +199,11 @@ function makeDemo() {
     activity: [],
     config: {
       product_docs:
-        "Uma plataforma de CRM que ajuda equipes comerciais a prospectar leads qualificados e iniciar conversas diretamente no WhatsApp.",
+        "Criação de páginas modernas de alta conversão, landing pages e sistemas sob medida para pequenas empresas, consultórios odontológicos e escritórios de advocacia.",
       campaign_target:
-        "Diretores comerciais, heads de vendas e fundadores de empresas de tecnologia B2B no Brasil, com equipes de vendas em crescimento.",
+        "Donos de pequenas empresas, sócios de clínicas odontológicas, consultórios médicos e escritórios de advocacia no Brasil que precisam de presença digital profissional e captação de clientes.",
+      whatsapp_template:
+        "Olá {primeiro_nome}, tudo bem? Vi seu perfil como {cargo} na {empresa}. Nós ajudamos pequenas empresas e consultórios a atraírem mais clientes com páginas modernas e sistemas sob medida. Posso te enviar um exemplo prático?",
       booking_link: "",
       operator_name: "Meu workspace",
       operator_country_code: "BR",
@@ -399,6 +403,27 @@ function populateForms(only) {
       providerPill.className = "pill success";
     }
   }
+  updateCampaignWaPreview();
+}
+
+function updateCampaignWaPreview() {
+  const tplInput = $("#campaign-whatsapp-template");
+  const linkInput = $('input[name="booking_link"]', $("#campaign-form"));
+  const preview = $("#wa-bubble-text");
+  if (!tplInput || !preview) return;
+
+  const tpl =
+    tplInput.value.trim() ||
+    "Olá {primeiro_nome}, tudo bem? Vi seu perfil como {cargo} na {empresa}. Nós ajudamos pequenas empresas e consultórios a atraírem mais clientes com páginas modernas e sistemas sob medida. Posso te enviar um exemplo prático?";
+
+  const previewText = tpl
+    .replace(/\{primeiro_nome\}|\{primeiro-nome\}|\{first_name\}/g, "Lucas")
+    .replace(/\{nome\}|\{name\}/g, "Lucas Silva")
+    .replace(/\{empresa\}|\{company\}/g, "Clínica Sorriso")
+    .replace(/\{cargo\}|\{title\}/g, "Sócio")
+    .replace(/\{link\}|\{booking_link\}/g, linkInput?.value?.trim() || "https://cal.com/demo");
+
+  preview.textContent = previewText;
 }
 
 async function load({ forms = false } = {}) {
@@ -499,10 +524,19 @@ function showLead(id) {
       ? '<span class="pill success" style="margin-left:8px;font-size:11px;">✓ Verificado</span>'
       : '<span class="pill" style="margin-left:8px;font-size:11px;background:rgba(255,255,255,0.08);">Padrão móvel válido</span>'
     : "";
+  const msgBox = row.whatsapp_message
+    ? `<div class="lead-wa-message-box"><div style="font-size:11px;font-weight:600;color:#128c7e;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;"><span style="display:inline-flex;align-items:center;gap:4px;">${icon("whatsapp")} Mensagem personalizada para este lead:</span><button type="button" id="copy-lead-msg" style="background:none;border:none;color:#128c7e;cursor:pointer;font-size:11px;font-weight:600;text-decoration:underline;">Copiar texto</button></div><p style="margin:0;font-size:12.5px;line-height:1.45;color:var(--ink);white-space:pre-wrap;">${esc(row.whatsapp_message)}</p></div>`
+    : "";
   $("#lead-detail").innerHTML =
-    `<span class="person-avatar detail-avatar">${esc(initials(row.name))}</span><h2 id="lead-detail-title">${esc(row.name)}</h2><p class="detail-subtitle">${esc(row.title || "Cargo não informado")}<br>${esc(row.company || "Empresa não informada")}</p><div class="detail-reason"><h3>${icon("sparkles")}Por que este lead combina com você</h3><p>${esc(row.reason || "Nenhum motivo registrado.")}</p></div><div class="detail-field"><span>WhatsApp / Celular</span><strong>${row.whatsapp ? `<a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="wa-badge" style="display:inline-flex;padding:4px 10px;font-size:14px;">${icon("whatsapp")} ${esc(row.whatsapp)}</a>${confBadge}` : '<span class="status-badge pending">Não encontrado na internet</span>'}</strong></div><div class="detail-field"><span>Qualificado em</span><strong>${formatDate(row.qualified_at)}</strong></div><div class="dialog-footer" style="display:flex;gap:8px;flex-wrap:wrap;">${row.whatsapp ? '<a class="button button-primary" id="open-whatsapp" href="' + esc(waUrl) + '" target="_blank" rel="noopener noreferrer" style="background:#25D366;border-color:#25D366;color:#fff;font-weight:600;padding:8px 16px;">' + icon("whatsapp") + "Conversar no WhatsApp ↗</a>" : '<button class="button" id="enrich-single-btn">' + icon("whatsapp") + "Buscar WhatsApp na Web</button>"}</div>`;
+    `<span class="person-avatar detail-avatar">${esc(initials(row.name))}</span><h2 id="lead-detail-title">${esc(row.name)}</h2><p class="detail-subtitle">${esc(row.title || "Cargo não informado")}<br>${esc(row.company || "Empresa não informada")}</p><div class="detail-reason"><h3>${icon("sparkles")}Por que este lead combina com você</h3><p>${esc(row.reason || "Nenhum motivo registrado.")}</p></div><div class="detail-field"><span>WhatsApp / Celular</span><strong>${row.whatsapp ? `<a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="wa-badge" style="display:inline-flex;padding:4px 10px;font-size:14px;">${icon("whatsapp")} ${esc(row.whatsapp)}</a>${confBadge}` : '<span class="status-badge pending">Não encontrado na internet</span>'}</strong></div><div class="detail-field"><span>Qualificado em</span><strong>${formatDate(row.qualified_at)}</strong></div>${msgBox}<div class="dialog-footer" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;">${row.whatsapp ? '<a class="button button-primary" id="open-whatsapp" href="' + esc(waUrl) + '" target="_blank" rel="noopener noreferrer" style="background:#25D366;border-color:#25D366;color:#fff;font-weight:600;padding:8px 16px;">' + icon("whatsapp") + "Conversar no WhatsApp ↗</a>" : '<button class="button" id="enrich-single-btn">' + icon("whatsapp") + "Buscar WhatsApp na Web</button>"}</div>`;
   $("#lead-dialog").setAttribute("aria-labelledby", "lead-detail-title");
   $("#lead-dialog").showModal();
+  $("#copy-lead-msg")?.addEventListener("click", () => {
+    if (row.whatsapp_message) {
+      navigator.clipboard.writeText(row.whatsapp_message);
+      toast("Mensagem copiada para a área de transferência!");
+    }
+  });
   $("#enrich-single-btn")?.addEventListener("click", async () => {
     try {
       toast("Buscando número na internet...");
@@ -713,6 +747,21 @@ $("#export").addEventListener("click", () => {
   if (state.demo)
     return toast("A exportação está disponível no seu workspace real.");
   location.href = `/api/export?${new URLSearchParams({ q: state.query, status: state.filter })}`;
+});
+$("#campaign-whatsapp-template")?.addEventListener("input", updateCampaignWaPreview);
+$('input[name="booking_link"]', $("#campaign-form"))?.addEventListener("input", updateCampaignWaPreview);
+$$(".tag-insert").forEach((el) => {
+  el.addEventListener("click", () => {
+    const tag = el.dataset.tag;
+    const textarea = $("#campaign-whatsapp-template");
+    if (!textarea || !tag) return;
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? textarea.value.length;
+    textarea.value = textarea.value.slice(0, start) + tag + textarea.value.slice(end);
+    textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+    textarea.focus();
+    updateCampaignWaPreview();
+  });
 });
 window.addEventListener("hashchange", navigate);
 hydrateIcons();

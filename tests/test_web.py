@@ -49,12 +49,20 @@ def test_secrets_never_leave_server_and_blank_preserves_existing_secret(client, 
 
 
 def test_campaign_validation_and_persistence(client, db):
-    assert client.post("/api/config/campaign", {"product_docs":"CRM"}).status_code == 400
-    payload = {"product_docs":"CRM for teams", "campaign_target":"Small B2B companies", "booking_link":"javascript:alert(1)"}
+    assert client.post("/api/config/campaign", {"product_docs": "CRM"}).status_code == 400
+    payload = {
+        "product_docs": "CRM for teams",
+        "campaign_target": "Small B2B companies",
+        "whatsapp_template": "Olá {primeiro_nome}, tudo bem na {empresa}?",
+        "booking_link": "javascript:alert(1)",
+    }
     assert client.post("/api/config/campaign", payload).status_code == 400
     payload["booking_link"] = "https://example.test/booking"
-    assert client.post("/api/config/campaign", payload).status_code == 200
+    res = client.post("/api/config/campaign", payload)
+    assert res.status_code == 200
+    assert res.json()["whatsapp_template"] == "Olá {primeiro_nome}, tudo bem na {empresa}?"
     assert SiteConfig.load().campaign_target == "Small B2B companies"
+    assert SiteConfig.load().whatsapp_template == "Olá {primeiro_nome}, tudo bem na {empresa}?"
     assert not SiteConfig.load().accepted_legal_notice
 
 

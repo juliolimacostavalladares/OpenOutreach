@@ -6,10 +6,11 @@ from openoutreach.config.models import SiteConfig
 class CampaignForm(forms.ModelForm):
     product_docs = forms.CharField(max_length=20000)
     campaign_target = forms.CharField(max_length=20000)
+    whatsapp_template = forms.CharField(max_length=20000, required=False, widget=forms.Textarea)
 
     class Meta:
         model = SiteConfig
-        fields = ["product_docs", "campaign_target", "booking_link"]
+        fields = ["product_docs", "campaign_target", "whatsapp_template", "booking_link"]
 
     def clean_booking_link(self):
         value = self.cleaned_data["booking_link"]

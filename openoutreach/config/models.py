@@ -27,6 +27,7 @@ from django.db import models
 FINDER_ENV = {
     "product_docs": "OPENOUTFIND_PRODUCT_DOCS",
     "campaign_target": "OPENOUTFIND_CAMPAIGN_TARGET",
+    "whatsapp_template": "OPENOUTREACH_WHATSAPP_TEMPLATE",
     "ai_model": "OPENOUTFIND_AI_MODEL",
     "llm_api_key": "OPENOUTFIND_LLM_API_KEY",
     "llm_api_base": "OPENOUTFIND_LLM_API_BASE",
@@ -47,6 +48,7 @@ FINDER_ENV = {
 SENDER_ENV = {
     "product_docs": "OUTSEND_PRODUCT_DOCS",
     "campaign_target": "OUTSEND_CAMPAIGN_TARGET",
+    "whatsapp_template": "OUTSEND_WHATSAPP_TEMPLATE",
     "booking_link": "OUTSEND_BOOKING_LINK",
     "ai_model": "OUTSEND_AI_MODEL",
     "llm_api_key": "OUTSEND_LLM_API_KEY",
@@ -70,6 +72,7 @@ class SiteConfig(models.Model):
     # ── what you sell, and to whom ────────────────────────────────
     product_docs = models.TextField(blank=True, default="")
     campaign_target = models.TextField(blank=True, default="")
+    whatsapp_template = models.TextField(blank=True, default="")
     # Never required: the sender renders its whole booking block only when there is one.
     booking_link = models.CharField(max_length=500, blank=True, default="")
 

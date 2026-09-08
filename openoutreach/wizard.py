@@ -172,7 +172,7 @@ def _ask_llm(config: SiteConfig) -> None:
     """
     from openoutfind.core.llm import verify_llm_credentials
 
-    _say("\n  The model that judges leads and writes your mail.")
+    _say("\n  The model that judges leads and personalizes your WhatsApp messages.")
     while True:
         config.ai_model = _ask(
             "Model, as provider:model (e.g. anthropic:claude-sonnet-4-5-20250929, "
