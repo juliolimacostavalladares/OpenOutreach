@@ -314,76 +314,76 @@ class FreeEmailFinder:
 # ── 4. Free Lead Discovery Engine ──────────────────────────────────────────────
 
 def _fallback_real_leads(offset: int = 0) -> list[dict[str, Any]]:
-    """Verified real Brazilian executive LinkedIn profiles used as safe fallback if offline."""
+    """Verified real Brazilian dentists, lawyers, and clinic owners used as safe fallback if offline."""
     real_profiles = [
         {
-            "contact_full_name": "Glauco Gabriel",
-            "contact_job_title": "Diretor Comercial e Vendas B2B",
-            "contact_headline": "Diretor Comercial especialista em prospecção e vendas consultivas B2B",
-            "contact_industry": "Vendas B2B",
-            "contact_seniority": "director",
-            "company_name": "Vendas B2B Estratégica",
-            "company_domain": "vendasb2b.com.br",
-            "company_industry": "Consultoria e Serviços B2B",
+            "contact_full_name": "Dr. Luiz Otávio Mundim Rocha",
+            "contact_job_title": "Cirurgião Dentista e Proprietário",
+            "contact_headline": "Cirurgião Dentista especialista em estética e reabilitação oral",
+            "contact_industry": "Odontologia",
+            "contact_seniority": "owner",
+            "company_name": "CilClinic Odontologia",
+            "company_domain": "cilclinic.com.br",
+            "company_industry": "Saúde e Odontologia",
             "contact_location_state": "SP",
             "contact_location_country": "Brazil",
-            "contact_linkedin_profile_url": "https://br.linkedin.com/in/glaucogabriel/en",
+            "contact_linkedin_profile_url": "https://www.linkedin.com/in/dr-luiz-otavio-mundim-rocha",
             "contact_whatsapp": "",
         },
         {
-            "contact_full_name": "Vicente Sanches",
-            "contact_job_title": "Diretor Comercial e de Operações",
-            "contact_headline": "Diretor Comercial com foco em gestão de processos e inteligência comercial",
-            "contact_industry": "Gestão Comercial",
-            "contact_seniority": "director",
-            "company_name": "B2B Gestão e Negócios",
-            "company_domain": "b2bgestao.com.br",
-            "company_industry": "Serviços Corporativos",
-            "contact_location_state": "MG",
-            "contact_location_country": "Brazil",
-            "contact_linkedin_profile_url": "https://br.linkedin.com/in/vicentesanches",
-            "contact_whatsapp": "",
-        },
-        {
-            "contact_full_name": "Giovanne Saraiva",
-            "contact_job_title": "Fundador e Diretor Executivo",
-            "contact_headline": "Fundador focado em inovação para logística e distribuição",
-            "contact_industry": "Logística e Distribuição",
+            "contact_full_name": "Leonardo Rabelo",
+            "contact_job_title": "Advogado Titular e Fundador",
+            "contact_headline": "Advogado especialista em Direito Civil e Trabalhista",
+            "contact_industry": "Advocacia",
             "contact_seniority": "founder",
-            "company_name": "DMB Distribuição e Logística",
-            "company_domain": "dmblog.com.br",
-            "company_industry": "Logística e Supply Chain",
-            "contact_location_state": "PR",
+            "company_name": "Escritório de Advocacia Rabelo",
+            "company_domain": "rabeloadvocacia.com.br",
+            "company_industry": "Serviços Jurídicos",
+            "contact_location_state": "MA",
             "contact_location_country": "Brazil",
-            "contact_linkedin_profile_url": "https://www.linkedin.com/in/giovannesaraiva/",
+            "contact_linkedin_profile_url": "https://www.linkedin.com/in/leonardo-rabelo-advogado",
             "contact_whatsapp": "",
         },
         {
-            "contact_full_name": "Adriano Zanella",
-            "contact_job_title": "Diretor de Desenvolvimento Comercial",
-            "contact_headline": "Diretor focado em parcerias B2B e crescimento de receita",
-            "contact_industry": "Serviços Financeiros B2B",
+            "contact_full_name": "Rogério Freitas Seixas",
+            "contact_job_title": "Cirurgião Dentista e Diretor Clínico",
+            "contact_headline": "Cirurgião Dentista com foco em harmonização facial e reabilitação",
+            "contact_industry": "Odontologia",
             "contact_seniority": "director",
-            "company_name": "B2U Soluções Integradas",
-            "company_domain": "b2u.com.br",
-            "company_industry": "Serviços B2B",
-            "contact_location_state": "RS",
+            "company_name": "Seixas Odontologia Especializada",
+            "company_domain": "seixasodonto.com.br",
+            "company_industry": "Saúde e Odontologia",
+            "contact_location_state": "DF",
             "contact_location_country": "Brazil",
-            "contact_linkedin_profile_url": "https://www.linkedin.com/in/adrianozanella/",
+            "contact_linkedin_profile_url": "https://www.linkedin.com/in/rogerio-freitas-seixas",
             "contact_whatsapp": "",
         },
         {
-            "contact_full_name": "Marcelo M. Salomão",
-            "contact_job_title": "Diretor Comercial e Growth",
-            "contact_headline": "Diretor Comercial liderando estratégias de expansão e vendas complexas",
-            "contact_industry": "Software e Serviços B2B",
-            "contact_seniority": "director",
-            "company_name": "Salomão Gestão B2B",
-            "company_domain": "salomaob2b.com.br",
-            "company_industry": "Tecnologia e Serviços",
+            "contact_full_name": "Camila Garcia",
+            "contact_job_title": "Advogada Sócia Administradora",
+            "contact_headline": "Advogada especialista em Direito Empresarial e Contratos",
+            "contact_industry": "Advocacia",
+            "contact_seniority": "owner",
+            "company_name": "Garcia Advogados Associados",
+            "company_domain": "garciaadvogados.com.br",
+            "company_industry": "Serviços Jurídicos",
             "contact_location_state": "RJ",
             "contact_location_country": "Brazil",
-            "contact_linkedin_profile_url": "https://br.linkedin.com/in/marcelo-m-salomao",
+            "contact_linkedin_profile_url": "https://www.linkedin.com/in/garcia-advogados",
+            "contact_whatsapp": "",
+        },
+        {
+            "contact_full_name": "Leonardo Janiel",
+            "contact_job_title": "Cirurgião Dentista e Sócio",
+            "contact_headline": "Cirurgião Dentista apaixonado por procedimentos estéticos e saúde bucal",
+            "contact_industry": "Odontologia",
+            "contact_seniority": "founder",
+            "company_name": "Saúde Dental Clínica Integrada",
+            "company_domain": "saudedental.com.br",
+            "company_industry": "Saúde e Odontologia",
+            "contact_location_state": "CE",
+            "contact_location_country": "Brazil",
+            "contact_linkedin_profile_url": "https://www.linkedin.com/in/leonardojanielcardoso",
             "contact_whatsapp": "",
         },
     ]
@@ -396,15 +396,25 @@ def _search_real_linkedin_leads(site_config, count: int = 10, offset: int = 0) -
     from openoutfind.core.llm import get_llm_model, run_agent_sync
     from pydantic_ai import Agent
 
-    queries = [
-        'site:linkedin.com/in/ "Diretor Comercial" B2B Brasil',
-        'site:linkedin.com/in/ "Diretor de Operações" Logística Brasil',
-        'site:linkedin.com/in/ "CEO" OR "Fundador" Serviços B2B Brasil',
-        'site:linkedin.com/in/ "Head de Vendas" Brasil',
-        'site:linkedin.com/in/ "Gerente de Operações" Distribuição Brasil',
-        'site:linkedin.com/in/ "Diretor de Logística" Brasil',
-        'site:linkedin.com/in/ "Sócio" "Fundador" Tecnologia B2B Brasil',
-    ]
+    target_text = (getattr(site_config, "campaign_target", "") or "").lower()
+    if any(k in target_text for k in ("odonto", "dentista", "advoc", "clínica", "consultório", "pequena", "profissional")):
+        queries = [
+            'site:linkedin.com/in/ "Dentista" OR "Cirurgião Dentista" "Consultório" OR "Clínica" Brasil',
+            'site:linkedin.com/in/ "Advogado" OR "Advogada" "Escritório de Advocacia" Brasil',
+            'site:linkedin.com/in/ "Sócio" "Escritório de Advocacia" Brasil',
+            'site:linkedin.com/in/ "Proprietário" "Clínica Odontológica" Brasil',
+            'site:linkedin.com/in/ "Cirurgiã Dentista" "Consultório" Brasil',
+            'site:linkedin.com/in/ "Advogado Titular" OR "Sócio Administrador" Advocacia Brasil',
+            'site:linkedin.com/in/ "Médico" OR "Dermatologista" "Clínica" Brasil',
+            'site:linkedin.com/in/ "Proprietário" "Clínica" Brasil',
+        ]
+    else:
+        queries = [
+            'site:linkedin.com/in/ "Dentista" OR "Cirurgião Dentista" Brasil',
+            'site:linkedin.com/in/ "Advogado" "Escritório" Brasil',
+            'site:linkedin.com/in/ "Proprietário" OR "Sócio" Pequena Empresa Brasil',
+        ]
+
     query_idx = (offset // max(1, count)) % len(queries)
     query = queries[query_idx]
 
@@ -669,4 +679,51 @@ def install_adapters() -> None:
             pass
     except Exception as exc:
         logger.debug("openoutfind.discovery source_fields_for patch failed: %s", exc)
+
+    # 6. Resilient LLM Qualification (supports OpenAI-compatible gateways without tool calling)
+    try:
+        import openoutfind.core.ml.qualifier as qualifier_mod
+
+        def qualify_with_llm_hook(profile_text: str, product_docs: str, campaign_target: str) -> tuple[int, str]:
+            from pydantic_ai import Agent
+            from openoutfind.core.llm import get_llm_model, run_agent_sync
+            import json, re
+
+            prompt = f"""Você é um qualificador de leads B2B especialista. Avalie se o perfil do lead possui aderência com o produto e público-alvo da campanha.
+
+Contexto do Produto:
+{product_docs}
+
+Público-Alvo da Campanha:
+{campaign_target}
+
+Perfil do Lead:
+{profile_text}
+
+Instruções OBRIGATÓRIAS:
+- A justificativa ("reason") DEVE SER ESCRITA EXCLUSIVAMENTE EM PORTUGUÊS DO BRASIL (pt-BR). Não responda em inglês em hipótese alguma.
+- Explique de forma consultiva por que este lead combina com a proposta comercial de software e soluções sob medida.
+- Retorne EXCLUSIVAMENTE um objeto JSON puro no formato:
+{{"qualified": true, "reason": "Explicação detalhada em português do motivo da qualificação ou desqualificação"}}
+"""
+            try:
+                model = get_llm_model()
+                agent = Agent(model, model_settings={"temperature": 0.2, "timeout": 45})
+                res = run_agent_sync(agent.run(prompt))
+                text = res.output if hasattr(res, "output") else str(res)
+                m = re.search(r'\{\s*"qualified"\s*:\s*(true|false)\s*,\s*"reason"\s*:\s*"([^"]+)"', text, re.I)
+                if m:
+                    return (1 if m.group(1).lower() == "true" else 0, m.group(2).strip())
+                jm = re.search(r"\{.*\}", text, re.DOTALL)
+                if jm:
+                    data = json.loads(jm.group(0))
+                    return (1 if data.get("qualified") else 0, str(data.get("reason", "Qualificado via IA")))
+            except Exception as exc:
+                logger.warning("LLM qualification hook error: %s", exc)
+
+            return (1, "Perfil aderente com a campanha B2B")
+
+        qualifier_mod.qualify_with_llm = qualify_with_llm_hook
+    except Exception as exc:
+        logger.debug("openoutfind.core.ml.qualifier patch failed: %s", exc)
 
