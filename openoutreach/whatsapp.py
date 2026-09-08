@@ -81,10 +81,14 @@ def normalize_whatsapp_digits(phone: str, default_ddd: str = "11") -> str:
     if len(digits) == 11:
         return f"55{digits}"
     elif len(digits) == 10:
-        # 10 digits usually missing 9 for mobile: insert 9
         ddd = digits[:2]
         rest = digits[2:]
-        return f"55{ddd}9{rest}"
+        if rest[0] in "6789":
+            # Old mobile missing 9th digit: insert 9
+            return f"55{ddd}9{rest}"
+        else:
+            # Landline / fixo (starts with 2, 3, 4, 5)
+            return f"55{digits}"
     elif len(digits) in (8, 9):
         # Local number without DDD
         num = digits if len(digits) == 9 else f"9{digits}"
@@ -94,12 +98,11 @@ def normalize_whatsapp_digits(phone: str, default_ddd: str = "11") -> str:
 
 
 def format_whatsapp(phone: str, default_ddd: str = "11") -> str:
-    """Format phone as Brazilian standard '+55 (DD) 9XXXX-XXXX'."""
+    """Format phone as Brazilian standard '+55 (DD) 9XXXX-XXXX' or '+55 (DD) XXXX-XXXX'."""
     raw = normalize_whatsapp_digits(phone, default_ddd=default_ddd)
     if not raw or len(raw) < 12:
         return phone or ""
 
-    # Expected: 55 + DD (2) + 9 (1) + 8 digits = 13 digits
     clean = raw[2:]  # Remove '55'
     if len(clean) == 11:
         ddd = clean[:2]
@@ -108,11 +111,194 @@ def format_whatsapp(phone: str, default_ddd: str = "11") -> str:
         return f"+55 ({ddd}) {part1}-{part2}"
     elif len(clean) == 10:
         ddd = clean[:2]
-        part1 = f"9{clean[2:6]}"
+        part1 = clean[2:6]
         part2 = clean[6:]
         return f"+55 ({ddd}) {part1}-{part2}"
 
     return f"+{raw}"
+
+
+def validate_brazilian_phone(phone: str, default_ddd: str = "11") -> dict[str, Any]:
+    """Validate whether a phone number matches Brazilian telecom standards (Anatel).
+
+    Checks:
+    1. Clean digits extraction.
+    2. DDD existence in the 67 official Brazilian area codes (11-99).
+    3. Mobile vs landline distinction:
+       - Mobile: 11 digits (DD + 9 + 8 digits), starts with 9 and second digit in [6, 7, 8, 9].
+       - Landline: 10 digits (DD + 8 digits), starts with 2, 3, 4, 5.
+    4. Formatted representation.
+    """
+    digits = re.sub(r"\D", "", phone or "")
+    if digits.startswith("55") and len(digits) in (12, 13):
+        clean = digits[2:]
+    elif len(digits) in (10, 11):
+        clean = digits
+    elif len(digits) in (8, 9):
+        clean = f"{default_ddd}{digits}"
+    else:
+        return {
+            "valid": False,
+            "type": "invalid",
+            "reason": f"Comprimento inválido ({len(digits)} dígitos, esperado 10 ou 11 com DDD)",
+            "formatted": phone,
+            "digits": digits,
+            "ddd": "",
+        }
+
+    ddd = clean[:2]
+    if ddd not in VALID_DDDS:
+        return {
+            "valid": False,
+            "type": "invalid",
+            "reason": f"DDD {ddd} não existe no Brasil",
+            "formatted": phone,
+            "digits": f"55{clean}",
+            "ddd": ddd,
+        }
+
+    body = clean[2:]
+    digits_full = f"55{clean}"
+    if len(clean) == 11:
+        if not body.startswith("9"):
+            return {
+                "valid": False,
+                "type": "invalid",
+                "reason": "Celular brasileiro com 11 dígitos deve iniciar com 9",
+                "formatted": phone,
+                "digits": digits_full,
+                "ddd": ddd,
+            }
+        second_digit = body[1]
+        phone_type = "mobile" if second_digit in "6789" else "mobile_unusual"
+        return {
+            "valid": True,
+            "type": phone_type,
+            "reason": "Celular móvel válido no padrão Anatel",
+            "formatted": format_whatsapp(phone, default_ddd=default_ddd),
+            "digits": digits_full,
+            "ddd": ddd,
+        }
+    else:
+        first_digit = body[0]
+        if first_digit in "2345":
+            return {
+                "valid": True,
+                "type": "landline",
+                "reason": "Telefone fixo corporativo (pode ter WhatsApp Business se habilitado)",
+                "formatted": f"+55 ({ddd}) {body[:4]}-{body[4:]}",
+                "digits": digits_full,
+                "ddd": ddd,
+            }
+        return {
+            "valid": False,
+            "type": "invalid",
+            "reason": f"Telefone de 10 dígitos com início inválido: {first_digit}",
+            "formatted": phone,
+            "digits": digits_full,
+            "ddd": ddd,
+        }
+
+
+def check_whatsapp_presence(
+    phone: str,
+    api_url: str | None = None,
+    api_key: str | None = None,
+    timeout: int = 4,
+) -> dict[str, Any]:
+    """Check if the phone number is active on WhatsApp servers.
+
+    If an external WhatsApp gateway is configured (Evolution API, Z-API, or generic onWhatsApp endpoint),
+    performs a real HTTP presence query.
+    Otherwise, performs rigorous offline telecom format validation and returns 'format_verified'.
+    """
+    val = validate_brazilian_phone(phone)
+    if not val["valid"]:
+        return {
+            "phone": phone,
+            "valid": False,
+            "on_whatsapp": False,
+            "status": "invalid",
+            "confidence": "none",
+            "reason": val["reason"],
+        }
+
+    digits = val["digits"]
+    import os
+    url = api_url or os.getenv("WHATSAPP_CHECK_URL") or os.getenv("EVOLUTION_API_URL")
+    key = api_key or os.getenv("WHATSAPP_API_KEY") or os.getenv("EVOLUTION_API_KEY")
+
+    if url:
+        try:
+            import requests
+            headers = {"apikey": key} if key else {}
+            endpoint = f"{url.rstrip('/')}/chat/whatsappNumbers"
+            resp = requests.post(endpoint, json={"numbers": [digits]}, headers=headers, timeout=timeout)
+            if resp.status_code == 200:
+                data = resp.json()
+                item = data[0] if isinstance(data, list) and data else data
+                exists = bool(item.get("exists"))
+                jid = item.get("jid")
+                return {
+                    "phone": val["formatted"],
+                    "valid": True,
+                    "on_whatsapp": exists,
+                    "status": "verified_active" if exists else "not_on_whatsapp",
+                    "confidence": "high" if exists else "none",
+                    "jid": jid,
+                    "reason": "Verificado em tempo real via protocolo WhatsApp",
+                }
+        except Exception as exc:
+            logger.debug("WhatsApp presence check online query failed: %s", exc)
+
+    is_mobile = val["type"] == "mobile"
+    return {
+        "phone": val["formatted"],
+        "valid": True,
+        "on_whatsapp": None,
+        "status": "format_verified" if is_mobile else "landline_format",
+        "confidence": "medium" if is_mobile else "low",
+        "jid": f"{digits}@s.whatsapp.net" if is_mobile else None,
+        "reason": val["reason"] + " (Padrão celular válido)",
+    }
+
+
+def enrich_company_via_brasilapi(cnpj: str, timeout: int = 5) -> dict[str, Any] | None:
+    """Fetch official Brazilian company registration data from BrasilAPI (free, public).
+
+    Returns official registered phone(s) and Quadro de Sócios e Administradores (QSA).
+    """
+    clean_cnpj = re.sub(r"\D", "", cnpj)
+    if len(clean_cnpj) != 14:
+        return None
+    try:
+        import requests
+        resp = requests.get(f"https://brasilapi.com.br/api/cnpj/v1/{clean_cnpj}", timeout=timeout)
+        if resp.status_code == 200:
+            data = resp.json()
+            phones = []
+            if data.get("ddd_telefone_1"):
+                phones.append(format_whatsapp(data["ddd_telefone_1"]))
+            if data.get("ddd_telefone_2"):
+                phones.append(format_whatsapp(data["ddd_telefone_2"]))
+
+            qsa = [
+                {
+                    "name": s.get("nome_socio"),
+                    "role": s.get("qualificacao_socio"),
+                }
+                for s in data.get("qsa", [])
+            ]
+            return {
+                "company_name": data.get("razao_social") or data.get("nome_fantasia"),
+                "state": data.get("uf"),
+                "city": data.get("municipio"),
+                "phones": phones,
+                "qsa": qsa,
+            }
+    except Exception as exc:
+        logger.debug("BrasilAPI lookup failed: %s", exc)
+    return None
 
 
 def get_whatsapp_url(phone: str, text: str = "") -> str:
@@ -233,8 +419,16 @@ Regras:
     if not phone:
         phone = generate_deterministic_whatsapp(lead)
 
-    # Persist to lead
+    val = validate_brazilian_phone(phone, default_ddd=deduce_lead_ddd(lead))
+    # Persist to lead with validation metadata
     sf["whatsapp"] = phone
+    sf["whatsapp_valid"] = val["valid"]
+    sf["whatsapp_type"] = val["type"]
+    sf["whatsapp_reason"] = val["reason"]
+    sf["whatsapp_confidence"] = sf.get("whatsapp_confidence") or (
+        "high" if sf.get("whatsapp_source") in ("bettercontact", "verified_active")
+        else ("medium" if val["type"] == "mobile" else "low")
+    )
     lead.source_fields = sf
     lead.save(update_fields=["source_fields"])
     return phone

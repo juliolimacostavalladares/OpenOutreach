@@ -78,6 +78,8 @@ def records():
         row["whatsapp"] = wa
         from openoutreach.whatsapp import get_whatsapp_url
         row["whatsapp_url"] = get_whatsapp_url(wa)
+        row["whatsapp_confidence"] = sf.get("whatsapp_confidence", "medium")
+        row["whatsapp_type"] = sf.get("whatsapp_type", "mobile")
     return sorted(rows, key=lambda row: row["qualified_at"], reverse=True)
 
 

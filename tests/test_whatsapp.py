@@ -5,13 +5,16 @@ from django.test import Client
 from openoutfind.crm.models import Deal, DealState, Lead
 from openoutreach.whatsapp import (
     STATE_TO_DDD,
+    check_whatsapp_presence,
     deduce_lead_ddd,
     enrich_all_leads,
+    enrich_company_via_brasilapi,
     enrich_lead_whatsapp,
     format_whatsapp,
     generate_deterministic_whatsapp,
     get_whatsapp_url,
     normalize_whatsapp_digits,
+    validate_brazilian_phone,
 )
 
 
@@ -121,3 +124,34 @@ def test_whatsapp_views_and_api(client, db):
     dash_res = client.get("/api/dashboard")
     assert dash_res.status_code == 200
     assert dash_res.json()["stats"]["whatsapp"] == 2
+
+
+def test_validate_brazilian_phone():
+    # Valid mobile
+    v1 = validate_brazilian_phone("+55 (11) 98765-4321")
+    assert v1["valid"] is True
+    assert v1["type"] == "mobile"
+    assert v1["ddd"] == "11"
+
+    # Valid landline
+    v2 = validate_brazilian_phone("1133334444")
+    assert v2["valid"] is True
+    assert v2["type"] == "landline"
+
+    # Invalid DDD (e.g. 00 or 90)
+    v3 = validate_brazilian_phone("00987654321")
+    assert v3["valid"] is False
+
+
+def test_check_whatsapp_presence():
+    # Valid mobile format verification
+    res = check_whatsapp_presence("+55 (31) 98765-4321")
+    assert res["valid"] is True
+    assert res["confidence"] in ("medium", "high")
+    assert "s.whatsapp.net" in res["jid"]
+
+    # Invalid number
+    inv = check_whatsapp_presence("123")
+    assert inv["valid"] is False
+    assert inv["confidence"] == "none"
+
