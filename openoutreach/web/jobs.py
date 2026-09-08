@@ -85,7 +85,16 @@ def _wait(process):
                     error=err_msg if code != 0 else "",
                 )
                 if code == 0:
-                    sys.stdout.write("\n\033[32m[openoutreach] ✓ Busca de leads concluída com sucesso!\033[0m\n\n")
+                    sys.stdout.write("\n\033[32m[openoutreach] ✓ Busca de leads concluída com sucesso!\033[0m\n")
+                    sys.stdout.write("\033[32m[openoutreach] Enriquecendo leads captados com WhatsApp...\033[0m\n")
+                    sys.stdout.flush()
+                    try:
+                        from openoutreach.whatsapp import enrich_all_leads
+                        enrich_all_leads(use_web_search=True)
+                        sys.stdout.write("\033[32m[openoutreach] ✓ Enriquecimento com WhatsApp finalizado.\033[0m\n\n")
+                    except Exception as wex:
+                        sys.stdout.write(f"\033[33m[openoutreach] Enriquecimento WhatsApp avisou: {wex}\033[0m\n\n")
+                    sys.stdout.flush()
                 else:
                     sys.stderr.write(f"\n\033[31m[openoutreach] ✗ Busca finalizada com código {code}.\033[0m\n\n")
                 sys.stdout.flush()
@@ -130,15 +139,12 @@ def job(request):
         env["OPENOUTREACH_DB"] = str(settings.DATABASE_PATH)
         env["PYTHONUNBUFFERED"] = "1"
         args = [sys.executable, "-m", "openoutreach", "find", str(count)]
-        emails = request.POST.get("emails") == "on"
-        if emails:
-            args.append("emails")
         try:
             _process = subprocess.Popen(args, env=env, stdin=subprocess.DEVNULL,
                                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         except OSError:
             return JsonResponse({"error": "Não foi possível iniciar a busca."}, status=500)
         _state.clear()
-        _state.update(status="running", count=count, emails=emails, started_at=time.time())
+        _state.update(status="running", count=count, started_at=time.time())
         threading.Thread(target=_wait, args=(_process,), daemon=True).start()
         return JsonResponse(_state.copy(), status=202)

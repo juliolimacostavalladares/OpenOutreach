@@ -37,9 +37,6 @@
         <a href="#campaign" data-page="campaign"
           ><i data-icon="target"></i>Minha campanha</a
         >
-        <a href="#activity" data-page="activity"
-          ><i data-icon="mail"></i>Atividade de e-mail</a
-        >
       </nav>
       <span class="nav-label second-label">GERENCIAR</span>
       <nav>
@@ -161,24 +158,17 @@
             </article>
             <article class="stat-card">
               <div class="stat-top">
-                <span>E-mails encontrados</span><i data-icon="at"></i>
-              </div>
-              <strong id="stat-email">—</strong>
-              <div class="stat-foot">Contatos com endereço disponível</div>
-            </article>
-            <article class="stat-card">
-              <div class="stat-top">
-                <span>WhatsApp encontrados</span><i data-icon="whatsapp"></i>
+                <span>WhatsApp disponíveis</span><i data-icon="whatsapp"></i>
               </div>
               <strong id="stat-whatsapp">—</strong>
-              <div class="stat-foot">Contatos com WhatsApp disponível</div>
+              <div class="stat-foot">Contatos com WhatsApp público</div>
             </article>
             <article class="stat-card">
               <div class="stat-top">
-                <span>E-mails enviados</span><i data-icon="send"></i>
+                <span>Sem WhatsApp</span><i data-icon="phone"></i>
               </div>
-              <strong id="stat-sent">—</strong>
-              <div class="stat-foot" id="sent-foot">Conversas em movimento</div>
+              <strong id="stat-pending">—</strong>
+              <div class="stat-foot" id="pending-foot">Sem número público localizado</div>
             </article>
           </div>
           <div class="analytics-grid">
@@ -255,9 +245,8 @@
             <div class="leads-toolbar">
               <div class="filter-tabs" role="group" aria-label="Filtrar leads">
                 <button class="active" data-filter="all">Todos os leads</button
-                ><button data-filter="email">Com e-mail</button
                 ><button data-filter="whatsapp">Com WhatsApp</button
-                ><button data-filter="pending">Sem e-mail</button>
+                ><button data-filter="pending">Sem WhatsApp</button>
               </div>
               <label class="search"
                 ><i data-icon="search"></i
@@ -343,14 +332,7 @@
                     type="url"
                     name="booking_link"
                     placeholder="https://cal.com/seu-nome" /></label
-                ><label
-                  >Assinatura de e-mail <small>Opcional</small
-                  ><textarea
-                    name="signature"
-                    rows="3"
-                    placeholder="Seu nome, cargo e empresa"
-                  ></textarea>
-                </label>
+                >
                 <div class="form-feedback" role="status"></div>
                 <div class="form-footer">
                   <span><i data-icon="lock"></i>Salvo no seu workspace</span
@@ -375,35 +357,6 @@
               </div>
             </aside>
           </div>
-        </section>
-        <section id="page-activity" class="page" hidden>
-          <div class="page-heading">
-            <div>
-              <div class="eyebrow">CONVERSAS EM MOVIMENTO</div>
-              <h1>Atividade de e-mail<span class="heading-dot">.</span></h1>
-              <p>
-                Acompanhe os envios e as respostas registrados pelo
-                OpenOutreach.
-              </p>
-            </div>
-            <button class="button" id="refresh-activity">
-              <i data-icon="refresh"></i>Atualizar
-            </button>
-          </div>
-          <div class="panel">
-            <div class="panel-heading">
-              <div>
-                <h2>Atividade recente</h2>
-                <p>As últimas 40 mensagens do seu workspace.</p>
-              </div>
-              <span class="pill neutral">Histórico de e-mail</span>
-            </div>
-            <div id="activity-list"></div>
-          </div>
-          <p class="help-line">
-            Os envios seguem a configuração e os limites do OpenOutSend. Para
-            executar um envio, use <code>openoutreach send</code> no terminal.
-          </p>
         </section>
         <section id="page-integrations" class="page" hidden>
           <div class="page-heading">
@@ -459,9 +412,9 @@
                     >Provedor Gratuito ativo</span
                   >
                 </div>
-                <h2>Descoberta & E-mails</h2>
+                <h2>Descoberta de Leads</h2>
                 <p>
-                  Descubra pessoas e resolva e-mails profissionais gratuitamente com IA ou BetterContact.
+                  Descubra pessoas e leads qualificados gratuitamente com busca web real e IA ou BetterContact.
                 </p>
                 <label
                   >Chave BetterContact <small>Opcional</small><input
@@ -473,57 +426,9 @@
                 <div class="integration-note">
                   <i data-icon="sparkles"></i>
                   <p id="provider-note">
-                    <strong>Modo Gratuito:</strong> Geração de leads inteligentes via IA local e resolução corporativa sem custo de créditos.
+                    <strong>Modo Gratuito:</strong> Busca de perfis reais na internet via DuckDuckGo e qualificação por IA local sem custo de créditos.
                   </p>
                 </div>
-              </article>
-              <article class="panel integration-card">
-                <div class="integration-header">
-                  <span class="integration-icon orange"
-                    ><i data-icon="mail"></i></span
-                  ><span class="pill neutral" id="mailbox-status"
-                    >Não configurado</span
-                  >
-                </div>
-                <h2>Sua caixa de e-mail / Resend</h2>
-                <p>Envie e-mails com Resend (re_...) ou qualquer provedor SMTP.</p>
-                <label
-                  >Endereço de envio (From)<input
-                    name="mailbox_address"
-                    type="email"
-                    placeholder="voce@empresa.com" /></label
-                ><label
-                  >Chave Resend (re_...) ou Senha SMTP<input
-                    name="mailbox_password"
-                    type="password"
-                    autocomplete="new-password"
-                    placeholder="Chave Resend (re_...) ou senha de app"
-                /></label>
-                <details>
-                  <summary>Configuração SMTP / IMAP manual</summary>
-                  <p class="help-line" style="margin-top: 0.5rem; font-size: 0.8rem; color: #666;">
-                    <strong>Resend SMTP:</strong> Host <code>smtp.resend.com</code>. Portas suportadas: <code>587</code>, <code>25</code>, <code>2587</code> (STARTTLS) ou <code>465</code>, <code>2465</code> (SMTPS / SSL implícito). O cabeçalho <code>Resend-Idempotency-Key</code> é gerenciado automaticamente para evitar e-mails duplicados.
-                  </p>
-                  <label
-                    >Servidor SMTP<input
-                      name="smtp_host"
-                      placeholder="smtp.resend.com" /></label
-                  ><label
-                    >Porta SMTP<input
-                      name="smtp_port"
-                      inputmode="numeric"
-                      placeholder="587 (ou 465)" /></label
-                  ><label
-                    >Servidor IMAP <small>Opcional (não usado com Resend)</small><input
-                      name="imap_host"
-                      placeholder="imap.gmail.com" /></label
-                  ><label
-                    >Porta IMAP<input
-                      name="imap_port"
-                      inputmode="numeric"
-                      placeholder="993"
-                  /></label>
-                </details>
               </article>
               <article class="panel integration-card">
                 <div class="integration-header">
@@ -549,7 +454,7 @@
               <div class="panel-heading">
                 <div>
                   <h2>Quem está por trás da conversa</h2>
-                  <p>Seus dados de operador e a identificação das mensagens.</p>
+                  <p>Seus dados de operador e a identificação do workspace.</p>
                 </div>
               </div>
               <div class="operator-fields">
@@ -557,12 +462,7 @@
                   >Seu nome<input
                     name="operator_name"
                     maxlength="200"
-                    placeholder="Como você assina" /></label
-                ><label
-                  >Seu e-mail<input
-                    name="operator_email"
-                    type="email"
-                    placeholder="voce@empresa.com" /></label
+                    placeholder="Seu nome ou da empresa" /></label
                 ><label
                   >País (sigla)<input
                     name="operator_country_code"
@@ -628,17 +528,11 @@
             max="100"
             value="10"
             required /></label
-        ><label class="checkbox-label"
-          ><input name="emails" type="checkbox" checked /><span
-            >Encontrar também o e-mail profissional<small
-              >Gratuito via padrões corporativos inteligentes ou BetterContact se configurado.</small
-            ></span
-          ></label
         >
         <div class="integration-note">
-          <i data-icon="info"></i>
+          <i data-icon="whatsapp"></i>
           <p id="find-explanation">
-            A busca utiliza seu modelo de IA e os provedores configurados. Nenhum e-mail será enviado por esta ação.
+            A busca utiliza seu modelo de IA e busca pública de leads reais na internet. Os leads encontrados são qualificados e enriquecidos com WhatsApp.
           </p>
         </div>
         <div class="form-feedback" role="status"></div>

@@ -10,16 +10,14 @@ from django.utils import timezone
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_http_methods
 
-from cold_outreach.emails.models.maillog import Direction, Kind, Message
 from openoutfind.core.export import lead_records, write_csv
 from openoutfind.crm.models import Lead
 from openoutreach.config.models import SiteConfig
 from openoutreach.web.forms import CampaignForm, IntegrationForm
 
 PUBLIC_FIELDS = (
-    "product_docs", "campaign_target", "booking_link", "signature", "ai_model",
-    "llm_api_base", "operator_name", "operator_email", "operator_country_code",
-    "mailbox_address", "smtp_host", "smtp_port", "imap_host", "imap_port",
+    "product_docs", "campaign_target", "booking_link", "ai_model",
+    "llm_api_base", "operator_name", "operator_country_code",
     "accepted_legal_notice",
 )
 
@@ -42,10 +40,6 @@ def public_config(config):
     result = {name: getattr(config, name) for name in PUBLIC_FIELDS}
     result["configured"] = {name: bool(getattr(config, name)) for name in IntegrationForm.secret_fields}
     result["free_provider_active"] = not bool(getattr(config, "bettercontact_api_key", ""))
-    result["is_resend"] = bool(
-        getattr(config, "mailbox_password", "").startswith("re_")
-        or getattr(config, "smtp_host", "") == "smtp.resend.com"
-    )
     return result
 
 
@@ -81,18 +75,16 @@ def filtered(rows, request):
     query = request.GET.get("q", "").casefold().strip()[:200]
     status = request.GET.get("status", "all")
     return [r for r in rows if (
-        (not query or query in " ".join(str(r.get(k) or "") for k in ("name", "company", "title", "email", "whatsapp")).casefold())
+        (not query or query in " ".join(str(r.get(k) or "") for k in ("name", "company", "title", "whatsapp")).casefold())
         and (status == "all"
-             or (status == "email" and bool(r.get("email")))
              or (status == "whatsapp" and bool(r.get("whatsapp")))
-             or (status == "pending" and not bool(r.get("email"))))
+             or (status == "pending" and not bool(r.get("whatsapp"))))
     )]
 
 
 @require_GET
 def dashboard(request):
     rows = records()
-    messages = Message.objects.all()
     today = timezone.localdate()
     first_day = today - timedelta(days=13)
     discovery = dict(Lead.objects.filter(synthetic=False, creation_date__date__gte=first_day)
@@ -102,22 +94,17 @@ def dashboard(request):
     for row in rows:
         day = row["qualified_at"][:10]
         qualified[day] = qualified.get(day, 0) + 1
-    activity = list(messages.order_by("-recorded_at").values(
-        "id", "subject", "direction", "kind", "to_address", "from_address", "sent_at", "recorded_at",
-    )[:40])
     return JsonResponse({
         "stats": {
             "discovered": Lead.objects.filter(synthetic=False).count(),
             "qualified": len(rows),
-            "email": sum(bool(r.get("email")) for r in rows),
             "whatsapp": sum(bool(r.get("whatsapp")) for r in rows),
-            "sent": messages.filter(direction=Direction.OUTBOUND).count(),
-            "replies": messages.filter(direction=Direction.INBOUND, kind=Kind.HUMAN_REPLY).count(),
+            "pending": sum(not bool(r.get("whatsapp")) for r in rows),
         },
         "chart": [{"date": (first_day + timedelta(days=i)).isoformat(),
                    "discovered": discovery.get(first_day + timedelta(days=i), 0),
                    "qualified": qualified.get((first_day + timedelta(days=i)).isoformat(), 0)} for i in range(14)],
-        "recent": rows[:5], "activity": activity,
+        "recent": rows[:5], "activity": [],
         "config": public_config(SiteConfig.objects.filter(pk=1).first() or SiteConfig()),
     })
 
@@ -144,7 +131,7 @@ def export(request):
     import csv
     response = HttpResponse(content_type="text/csv; charset=utf-8")
     response["Content-Disposition"] = 'attachment; filename="openoutreach-leads.csv"'
-    fieldnames = ["name", "email", "whatsapp", "first_name", "last_name", "company", "title", "website", "linkedin_url", "reason", "lead_id", "qualified_at"]
+    fieldnames = ["name", "whatsapp", "first_name", "last_name", "company", "title", "website", "linkedin_url", "reason", "lead_id", "qualified_at"]
     writer = csv.DictWriter(response, fieldnames=fieldnames, extrasaction="ignore")
     writer.writeheader()
     for row in filtered(records(), request):

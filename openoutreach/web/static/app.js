@@ -74,7 +74,6 @@ const titles = {
   overview: "Visão geral",
   leads: "Seus leads",
   campaign: "Minha campanha",
-  activity: "Atividade de e-mail",
   integrations: "Integrações",
 };
 const state = {
@@ -164,11 +163,10 @@ function makeDemo() {
     "+55 (51) 99345-6789",
     "+55 (19) 98456-7890",
   ];
-  const rows = people.map(([name, title, company, email, reason], i) => ({
+  const rows = people.map(([name, title, company, _email, reason], i) => ({
     name,
     title,
     company,
-    email,
     whatsapp: demoPhones[i] || "",
     whatsapp_url: demoPhones[i]
       ? `https://wa.me/${demoPhones[i].replace(/\D/g, "")}`
@@ -186,10 +184,8 @@ function makeDemo() {
     stats: {
       discovered: 84,
       qualified: 8,
-      email: 5,
       whatsapp: 8,
-      sent: 16,
-      replies: 3,
+      pending: 0,
     },
     recent: rows.slice(0, 5),
     demoRows: rows,
@@ -198,46 +194,23 @@ function makeDemo() {
       discovered: value,
       qualified: i >= 6 ? 1 : 0,
     })),
-    activity: rows
-      .slice(0, 4)
-      .map((r, i) => ({
-        id: i,
-        subject:
-          i === 0
-            ? "Re: Uma ideia para a Lumina"
-            : `Uma ideia para a ${r.company}`,
-        direction: i === 0 ? "in" : "out",
-        kind: i === 0 ? "human_reply" : "outbound",
-        to_address: r.email || "contato@forma.example",
-        from_address: r.email,
-        recorded_at: dateAt(i),
-        sent_at: dateAt(i),
-      })),
+    activity: [],
     config: {
       product_docs:
-        "Uma plataforma de CRM que ajuda equipes comerciais a organizar contatos, acompanhar oportunidades e criar relacionamentos melhores com seus potenciais clientes.",
+        "Uma plataforma de CRM que ajuda equipes comerciais a prospectar leads qualificados e iniciar conversas diretamente no WhatsApp.",
       campaign_target:
         "Diretores comerciais, heads de vendas e fundadores de empresas de tecnologia B2B no Brasil, com equipes de vendas em crescimento.",
       booking_link: "",
-      signature: "Equipe OpenOutreach",
       operator_name: "Meu workspace",
-      operator_email: "",
       operator_country_code: "BR",
       ai_model: "",
       llm_api_base: "",
-      mailbox_address: "",
-      smtp_host: "",
-      smtp_port: "",
-      imap_host: "",
-      imap_port: "",
       accepted_legal_notice: false,
       configured: {
         llm_api_key: false,
         bettercontact_api_key: false,
-        mailbox_password: false,
       },
       free_provider_active: true,
-      is_resend: false,
     },
   };
 }
@@ -310,10 +283,10 @@ function table(rows) {
       !state.query && state.filter === "all",
     );
   rows.forEach((row) => state.rows.set(String(row.lead_id), row));
-  return `<table><thead><tr><th>CONTATO</th><th>EMPRESA</th><th>E-MAIL</th><th>WHATSAPP</th><th>QUALIFICADO EM</th><th><span class="sr-only">Detalhes</span></th></tr></thead><tbody>${rows
+  return `<table><thead><tr><th>CONTATO</th><th>EMPRESA</th><th>WHATSAPP</th><th>QUALIFICADO EM</th><th><span class="sr-only">Detalhes</span></th></tr></thead><tbody>${rows
     .map(
       (row, i) =>
-        `<tr><td><div class="person"><span class="person-avatar tone-${i % 4}">${esc(initials(row.name))}</span><span><strong>${esc(row.name)}</strong><small>${esc(row.title || "Cargo não informado")}</small></span></div></td><td>${esc(row.company || "Não informada")}</td><td><span class="status-badge ${row.email ? "" : "pending"}">${row.email ? "Disponível" : "Não encontrado"}</span></td><td>${row.whatsapp ? `<a href="${esc(row.whatsapp_url || `https://wa.me/${row.whatsapp.replace(/\D/g, "")}`)}" target="_blank" rel="noopener noreferrer" class="wa-badge" title="Abrir conversa no WhatsApp">${icon("whatsapp")} ${esc(row.whatsapp)}</a>` : '<span class="status-badge pending" title="Nenhum número público encontrado na internet">Não encontrado</span>'}</td><td>${formatDate(row.qualified_at)}</td><td><button class="detail-button" data-lead="${esc(row.lead_id)}" aria-label="Ver detalhes de ${esc(row.name)}">Ver contexto ${icon("arrow")}</button></td></tr>`,
+        `<tr><td><div class="person"><span class="person-avatar tone-${i % 4}">${esc(initials(row.name))}</span><span><strong>${esc(row.name)}</strong><small>${esc(row.title || "Cargo não informado")}</small></span></div></td><td>${esc(row.company || "Não informada")}</td><td>${row.whatsapp ? `<a href="${esc(row.whatsapp_url || `https://wa.me/${row.whatsapp.replace(/\D/g, "")}`)}" target="_blank" rel="noopener noreferrer" class="wa-badge" title="Abrir conversa no WhatsApp">${icon("whatsapp")} ${esc(row.whatsapp)}</a>` : '<span class="status-badge pending" title="Nenhum número público encontrado na internet">Não encontrado</span>'}</td><td>${formatDate(row.qualified_at)}</td><td><button class="detail-button" data-lead="${esc(row.lead_id)}" aria-label="Ver detalhes de ${esc(row.name)}">Ver contexto ${icon("arrow")}</button></td></tr>`,
     )
     .join("")}</tbody></table>`;
 }
@@ -351,8 +324,8 @@ function renderChart(chart) {
 }
 
 function renderDashboard() {
-  const { stats, config, recent, chart, activity } = state.data;
-  for (const key of ["discovered", "qualified", "email", "whatsapp", "sent"]) {
+  const { stats, config, recent, chart } = state.data;
+  for (const key of ["discovered", "qualified", "whatsapp", "pending"]) {
     const el = $(`#stat-${key}`);
     if (el) el.textContent = number(stats[key] ?? 0);
   }
@@ -360,15 +333,16 @@ function renderDashboard() {
   $("#qualified-foot").innerHTML = stats.discovered
     ? `<em>${Math.round((stats.qualified / stats.discovered) * 100)}% do total</em> compatíveis com seu público`
     : "Compatíveis com seu público";
-  $("#sent-foot").innerHTML = stats.replies
-    ? `<em>${number(stats.replies)} respostas</em> de pessoas reais`
-    : "Conversas em movimento";
+  const pendingFoot = $("#pending-foot");
+  if (pendingFoot) {
+    pendingFoot.innerHTML = stats.pending
+      ? `<em>${number(stats.pending)} leads</em> sem WhatsApp localizado`
+      : "Todos com WhatsApp localizado";
+  }
   $("#funnel").innerHTML = [
     ["Pessoas descobertas", stats.discovered],
     ["Matches qualificados", stats.qualified],
-    ["E-mails disponíveis", stats.email],
-    ["WhatsApp encontrados", stats.whatsapp ?? stats.qualified],
-    ["Mensagens enviadas", stats.sent],
+    ["WhatsApp disponíveis", stats.whatsapp ?? stats.qualified],
   ]
     .map(
       ([label, value], i) =>
@@ -377,18 +351,6 @@ function renderDashboard() {
     .join("");
   $("#recent-leads").innerHTML = table(recent);
   renderChart(chart);
-  $("#activity-list").innerHTML = activity.length
-    ? activity
-        .map(
-          (row) =>
-            `<article class="activity-row"><span class="integration-icon ${row.direction === "in" ? "green" : "violet"}">${icon(row.direction === "in" ? "mail" : "send")}</span><div><h3>${esc(row.subject || "Sem assunto")}</h3><p>${row.direction === "in" ? "Recebido de" : "Enviado para"} ${esc(row.direction === "in" ? row.from_address : row.to_address)}${row.kind === "human_reply" ? " · Resposta humana" : ""}</p></div><time datetime="${esc(row.sent_at || row.recorded_at)}">${formatDate(row.sent_at || row.recorded_at)}</time></article>`,
-        )
-        .join("")
-    : empty(
-        "Suas conversas vão aparecer aqui",
-        "O histórico é atualizado a partir dos envios e respostas registrados pelo OpenOutSend.",
-        false,
-      );
   const name = config.operator_name || "Meu workspace";
   $("#operator-avatar").textContent = initials(config.operator_name || "Eu");
   $("#operator-label").innerHTML = `${esc(name)}<small>Conta pessoal</small>`;
@@ -409,9 +371,7 @@ function populateForms(only) {
         el.value = "";
         el.placeholder = config.configured[el.name]
           ? "Chave salva · deixe em branco para manter"
-          : el.name === "mailbox_password"
-            ? "Senha de aplicativo"
-            : "Sua chave de API";
+          : "Sua chave de API";
       } else if (el.type === "checkbox") el.checked = Boolean(config[el.name]);
       else el.value = config[el.name] || "";
       el.disabled = state.demo;
@@ -437,18 +397,6 @@ function populateForms(only) {
     } else {
       providerPill.textContent = "Provedor Gratuito ativo";
       providerPill.className = "pill success";
-    }
-  }
-
-  const mailboxPill = $("#mailbox-status");
-  if (mailboxPill) {
-    const hasPass = Boolean(config.configured.mailbox_password);
-    if (hasPass) {
-      mailboxPill.textContent = config.is_resend ? "Resend ativo" : "SMTP ativo";
-      mailboxPill.className = "pill success";
-    } else {
-      mailboxPill.textContent = "Não configurado";
-      mailboxPill.className = "pill neutral";
     }
   }
 }
@@ -479,12 +427,12 @@ async function loadLeads() {
       const rows = state.data.demoRows.filter(
         (r) =>
           (!query ||
-            `${r.name} ${r.company} ${r.title} ${r.email || ""} ${r.whatsapp || ""}`
+            `${r.name} ${r.company} ${r.title} ${r.whatsapp || ""}`
               .toLocaleLowerCase("pt-BR")
               .includes(query)) &&
           (state.filter === "all" ||
-            (state.filter === "email" && Boolean(r.email)) ||
-            (state.filter === "whatsapp" && Boolean(r.whatsapp))),
+            (state.filter === "whatsapp" && Boolean(r.whatsapp)) ||
+            (state.filter === "pending" && !Boolean(r.whatsapp))),
       );
       result = {
         rows: rows.slice((state.leadPage - 1) * 20, state.leadPage * 20),
@@ -552,15 +500,18 @@ function showLead(id) {
       : '<span class="pill" style="margin-left:8px;font-size:11px;background:rgba(255,255,255,0.08);">Padrão móvel válido</span>'
     : "";
   $("#lead-detail").innerHTML =
-    `<span class="person-avatar detail-avatar">${esc(initials(row.name))}</span><h2 id="lead-detail-title">${esc(row.name)}</h2><p class="detail-subtitle">${esc(row.title || "Cargo não informado")}<br>${esc(row.company || "Empresa não informada")}</p><div class="detail-reason"><h3>${icon("sparkles")}Por que este lead combina com você</h3><p>${esc(row.reason || "Nenhum motivo registrado.")}</p></div><div class="detail-field"><span>E-mail profissional</span><strong>${esc(row.email || "Não encontrado")}</strong></div><div class="detail-field"><span>WhatsApp / Celular</span><strong>${row.whatsapp ? `<a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="wa-badge" style="display:inline-flex;padding:4px 10px;font-size:14px;">${icon("whatsapp")} ${esc(row.whatsapp)}</a>${confBadge}` : '<span class="status-badge pending">Não encontrado na internet</span>'}</strong></div><div class="detail-field"><span>Qualificado em</span><strong>${formatDate(row.qualified_at)}</strong></div><div class="dialog-footer" style="display:flex;gap:8px;flex-wrap:wrap;">${row.email ? '<button class="button" id="copy-email">' + icon("at") + "Copiar e-mail</button>" : ""}${row.whatsapp ? '<a class="button button-primary" id="open-whatsapp" href="' + esc(waUrl) + '" target="_blank" rel="noopener noreferrer" style="background:#25D366;border-color:#25D366;color:#fff;">' + icon("whatsapp") + "Conversar no WhatsApp ↗</a>" : ""}</div>`;
+    `<span class="person-avatar detail-avatar">${esc(initials(row.name))}</span><h2 id="lead-detail-title">${esc(row.name)}</h2><p class="detail-subtitle">${esc(row.title || "Cargo não informado")}<br>${esc(row.company || "Empresa não informada")}</p><div class="detail-reason"><h3>${icon("sparkles")}Por que este lead combina com você</h3><p>${esc(row.reason || "Nenhum motivo registrado.")}</p></div><div class="detail-field"><span>WhatsApp / Celular</span><strong>${row.whatsapp ? `<a href="${esc(waUrl)}" target="_blank" rel="noopener noreferrer" class="wa-badge" style="display:inline-flex;padding:4px 10px;font-size:14px;">${icon("whatsapp")} ${esc(row.whatsapp)}</a>${confBadge}` : '<span class="status-badge pending">Não encontrado na internet</span>'}</strong></div><div class="detail-field"><span>Qualificado em</span><strong>${formatDate(row.qualified_at)}</strong></div><div class="dialog-footer" style="display:flex;gap:8px;flex-wrap:wrap;">${row.whatsapp ? '<a class="button button-primary" id="open-whatsapp" href="' + esc(waUrl) + '" target="_blank" rel="noopener noreferrer" style="background:#25D366;border-color:#25D366;color:#fff;font-weight:600;padding:8px 16px;">' + icon("whatsapp") + "Conversar no WhatsApp ↗</a>" : '<button class="button" id="enrich-single-btn">' + icon("whatsapp") + "Buscar WhatsApp na Web</button>"}</div>`;
   $("#lead-dialog").setAttribute("aria-labelledby", "lead-detail-title");
   $("#lead-dialog").showModal();
-  $("#copy-email")?.addEventListener("click", async () => {
+  $("#enrich-single-btn")?.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(row.email);
-      toast("E-mail copiado.");
-    } catch {
-      toast("Não foi possível copiar. Selecione o endereço para copiá-lo.");
+      toast("Buscando número na internet...");
+      const res = await api("/api/enrich/whatsapp", { method: "POST" });
+      toast(`Enriquecimento concluído: ${res.enriched} novos números.`);
+      $("#lead-dialog").close();
+      await load();
+    } catch (e) {
+      toast(e.message);
     }
   });
 }
@@ -703,7 +654,7 @@ $$("dialog").forEach((dialog) =>
 $("#demo-toggle").addEventListener("click", () => toggleDemo(!state.demo));
 $("#exit-demo").addEventListener("click", () => toggleDemo(false));
 $("#retry").addEventListener("click", () => load({ forms: !state.data }));
-$("#refresh-activity").addEventListener("click", async () => {
+$("#refresh-activity")?.addEventListener("click", async () => {
   await load();
   if ($("#global-error").hidden) toast("Atividade atualizada.");
 });

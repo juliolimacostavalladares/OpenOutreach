@@ -46,21 +46,19 @@ import sys
 DEFAULT_GOAL = 5
 
 OVERVIEW = """\
-OpenOutreach — find B2B leads that fit, and email the ones that do.
+OpenOutreach — descubra e qualifique leads B2B com foco em WhatsApp.
 
-  openoutreach                  onboard if needed, then find and send
-  openoutreach run 5            ...with an explicit goal (≤5 email credits)
-  openoutreach init             onboard only — both halves, one flow
+  openoutreach                  onboard se necessário, depois busca e enriquece com WhatsApp
+  openoutreach run 5            ...com objetivo explícito de leads
+  openoutreach init             onboard apenas
 
-  openoutreach find 10          ten more qualified leads → CSV on stdout
-  openoutreach find 10 emails   ...with a verified work email (1 credit each)
+  openoutreach find 10          dez leads qualificados → CSV no stdout
   openoutreach enrich-whatsapp  enriquece leads captados com WhatsApp (+55 DD 9XXXX-XXXX)
-  openoutreach send             mail what is already stored
-  openoutreach status           what is configured, blocked and counted
+  openoutreach status           o que está configurado, bloqueado e contado
 
-  openoutreach help <command>   details for one command
+  openoutreach help <command>   detalhes de um comando
 
-Django's own commands (migrate, createsuperuser) still work.
+Os comandos padrão do Django (migrate, createsuperuser) continuam funcionando.
 """
 
 #: The verbs this project answers itself. Everything else is the finder's own command
@@ -214,52 +212,31 @@ def _init(rest: list[str]) -> int:
 
 
 def _send(rest: list[str]) -> int:
-    """Hand `send` and its arguments to the sender, in this process.
-
-    Its `main()` is a plain argparse entry point — the sender has no management commands
-    — so this is a call, not a `call_command`. Its own `_boot()` is safe here:
-    `DJANGO_SETTINGS_MODULE` is set with `setdefault` and `django.setup()` is idempotent.
-    """
-    from cold_outreach.__main__ import main as outsend_main
-
-    return outsend_main(["send", *rest])
+    """Send was deprecated as OpenOutreach is now 100% focused on WhatsApp."""
+    print("Aviso: O envio de e-mails foi descontinuado. O OpenOutreach agora é 100% focado em WhatsApp.", file=sys.stderr)
+    return 0
 
 
 def _run(rest: list[str]) -> int:
-    """Onboard if needed, find leads carrying an address, then mail them.
-
-    The two halves meet the way they meet on the command line — JSON Lines, the contract
-    from `find --json` to the sender's ingest — except that the stream is a buffer in this
-    process rather than a pipe between two. That is deliberate: the format is the
-    integration surface either way, and a `run` that used some privileged in-memory
-    hand-off would be a second, untested path between the same two programs.
-    """
+    """Onboard if needed, find qualified leads, and enrich them with WhatsApp."""
     from django.core.management import call_command
-
-    from cold_outreach.leads.ingest import ingest
     from openoutfind.core.errors import OpenOutFindError
     from openoutreach import wizard
+    from openoutreach.whatsapp import enrich_all_leads
 
     goal = _goal(rest)
     wizard.onboard()
 
-    print(f"\nFinding {goal} lead(s) with a verified address — at most {goal} credits.",
-          file=sys.stderr)
-    found = io.StringIO()
+    print(f"\nBuscando {goal} lead(s) qualificados para WhatsApp...", file=sys.stderr)
     try:
-        call_command("find", str(goal), "emails", "--json", stdout=found)
+        call_command("find", str(goal))
     except OpenOutFindError as exc:
-        # Seven leads are seven leads: what landed before the walk stopped is already in
-        # the buffer and worth sending. Only an empty one is a failed run.
-        if not found.getvalue().strip():
-            raise
-        print(f"the search stopped short: {exc}", file=sys.stderr)
+        print(f"A busca parou: {exc}", file=sys.stderr)
 
-    found.seek(0)
-    result = ingest(found)
-    print(f"handed {result.stored} lead(s) to the sender", file=sys.stderr)
-
-    return _send([])
+    print("Enriquecendo leads com números de WhatsApp...", file=sys.stderr)
+    enrich_all_leads(use_web_search=True)
+    print("✓ Concluído.", file=sys.stderr)
+    return 0
 
 
 def _goal(rest: list[str]) -> int:
