@@ -170,3 +170,31 @@ def test_resend_ports_and_idempotency_key(mocker):
     assert msg["X-Entity-Ref-ID"] == msg["Resend-Idempotency-Key"]
     mock_smtp_inst.login.assert_called_once_with("resend", "re_test_key_123")
     mock_smtp_inst.send_message.assert_called_once_with(msg)
+
+
+@pytest.mark.django_db
+def test_idempotent_deal_creation():
+    from openoutfind.crm.models import Lead, Deal, DealState
+    from openoutfind.core.db.leads import promote_lead_to_deal
+    from openoutfind.core.db.deals import _create_deal
+
+    lead = Lead.objects.create(profile_url="https://www.linkedin.com/in/test-idempotent-lead")
+
+    # First promote creates deal
+    d1 = promote_lead_to_deal(lead.profile_url, reason="Primeira qualificação")
+    assert d1.state == DealState.QUALIFIED
+    assert d1.reason == "Primeira qualificação"
+    assert Deal.objects.filter(lead=lead).count() == 1
+
+    # Second promote updates deal instead of raising IntegrityError
+    d2 = promote_lead_to_deal(lead.profile_url, reason="Segunda qualificação atualizada")
+    assert d2.pk == d1.pk
+    assert d2.reason == "Segunda qualificação atualizada"
+    assert Deal.objects.filter(lead=lead).count() == 1
+
+    # _create_deal also updates instead of failing UNIQUE constraint
+    d3 = _create_deal(lead=lead, state=DealState.FAILED, outcome="wrong_fit", reason="Rejeitado")
+    assert d3.pk == d1.pk
+    assert d3.state == DealState.FAILED
+    assert Deal.objects.filter(lead=lead).count() == 1
+
